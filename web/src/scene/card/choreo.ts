@@ -92,3 +92,30 @@ export function fadeToward(current: number, target: number, dtMs: number, durati
   if (current > target) return Math.max(target, current - step);
   return current;
 }
+
+/**
+ * Reduced motion as a dip cross-fade: the level whose view is shown fades
+ * out, the view switches while nothing is visible, and the new level fades
+ * in. Leaving the Tree needs no fade-out (the tree layer fades itself), so
+ * every change takes at most 2 · halfMs ≤ 200 ms.
+ */
+export interface DipState {
+  /** Level whose view is shown: 1 Tree, 2 Card, 3 Atlas. */
+  level: 1 | 2 | 3;
+  /** Opacity of the shown level's card/atlas content, 0..1. */
+  alpha: number;
+}
+
+/** The level a reduced-motion view should show at zoom z. */
+export function dipLevel(z: number): 1 | 2 | 3 {
+  return z < 1.5 ? 1 : z < 2.5 ? 2 : 3;
+}
+
+export function dipStep(s: DipState, want: 1 | 2 | 3, dtMs: number, halfMs = 90): DipState {
+  if (want !== s.level) {
+    if (s.level === 1 || s.alpha <= 0) return { level: want, alpha: 0 };
+    const alpha = fadeToward(s.alpha, 0, dtMs, halfMs);
+    return alpha <= 0 ? { level: want, alpha: 0 } : { level: s.level, alpha };
+  }
+  return { level: s.level, alpha: fadeToward(s.alpha, 1, dtMs, halfMs) };
+}

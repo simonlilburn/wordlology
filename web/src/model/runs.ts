@@ -174,6 +174,7 @@ class Manager implements RunManagerImpl {
           for (const g of ev.games) run.games.push(g);
         } else if (ev.type === 'progress') {
           run.progress = ev;
+          if (ev.phases?.length && !run.phases.length) run.phases = ev.phases;
         } else if (ev.type === 'summary') {
           run.summary = ev;
           run.phases = ev.phases;

@@ -11,6 +11,7 @@ import { focusData } from '../../model/focus';
 import { targetWeights } from '../../model/wordlists';
 import type { CardSnapshot, Run } from '../../model/types';
 import { displayFromSnapshot, emptyDisplay, type CardDisplay } from '../card/display';
+import { gridWithFocus } from './grid';
 
 export function cellKey(strategyId: string, opener: string | null): string {
   return `${strategyId}|${opener ?? ''}`;
@@ -303,16 +304,24 @@ export function focusCellIndex(): [number, number] | null {
 
 /**
  * Seed the atlas from the focus when it is first shown, and keep the focused
- * card in the grid (a new focus strategy/opener joins as a column/row).
+ * card in the grid (see grid.ts: a lone column or row follows the focus, a
+ * longer one gains the new entry).
  */
 export function seedAtlas(): void {
   const s = app.focus.strategy;
   if (!s) return;
   const a = app.atlas;
-  if (a.columns.length === 0) a.columns = [s];
-  if (a.rows.length === 0) a.rows = [app.focus.opener];
-  if (!a.columns.some((c) => c.id === s.id)) a.columns = [...a.columns, s];
-  if (!a.rows.includes(app.focus.opener)) a.rows = [...a.rows, app.focus.opener];
+  const next = gridWithFocus(a.columns, a.rows, s, app.focus.opener);
+  if (!next.changed) return;
+  const colsChanged = next.columns.length !== a.columns.length || next.columns.some((c, i) => c !== a.columns[i]);
+  const rowsChanged = next.rows.length !== a.rows.length || next.rows.some((r, i) => r !== a.rows[i]);
+  if (colsChanged) a.columns = next.columns.map((c) => (c === s ? plainEntry(s) : c));
+  if (rowsChanged) a.rows = next.rows;
+  if (a.selected.length) a.selected = [];
+}
+
+function plainEntry(e: StrategyEntry): StrategyEntry {
+  return JSON.parse(JSON.stringify(e)) as StrategyEntry;
 }
 
 /** Whether the atlas needs seeding to contain the focus. */

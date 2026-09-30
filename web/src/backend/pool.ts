@@ -131,6 +131,8 @@ export function mergeProgress(shards: { progress: ProgressEvent | null; range: [
   };
   if (settledDepth !== undefined) ev.settledDepth = settledDepth;
   if (unresolved !== undefined) ev.unresolved = unresolved;
+  const phases = shards.find((s) => s.progress?.phases?.length)?.progress?.phases;
+  if (phases) ev.phases = phases;
   return ev;
 }
 

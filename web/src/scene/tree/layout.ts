@@ -9,11 +9,14 @@
 //     of the width it was allocated (slots ∝ subtree games, water-filled with
 //     a minimum label width). A node shows its children in descending mass
 //     while they fit (minLabel screen px each at the layout scale, at most
-//     maxChildren); the rest merge into one ellipsis node. Taps on an
-//     ellipsis add expandStep more children each. Forced nodes (trunk,
-//     player paths, the selected path, revealed filter matches) always show.
+//     maxChildren, plus a legible ellipsis for the rest, which merge into
+//     one ellipsis node). Taps on an ellipsis add expandStep more children
+//     each. Forced nodes (trunk, player paths, the selected path, revealed
+//     filter matches) always show.
 //  2. Measure what each visible subtree needs, bottom up (so forced nodes
-//     never overlap their neighbours).
+//     never overlap their neighbours), with a width per game λ chosen so the
+//     heavier side of the trunk fills half the width: the tree fits on
+//     screen, trunk centred, whenever its labels do.
 //  3. Place, top down: trunk nodes sit at x = 0 with their trunk child
 //     straight below and the other children alternating right and left by
 //     mass (heaviest nearest the trunk); other nodes order their children by
@@ -98,6 +101,8 @@ export interface LayoutInput {
   expanded?: ReadonlyMap<number, number>;
   /** Filter matches in a node's subtree, for ellipsis badges. */
   matchesBelow?: (n: TrieNode) => number;
+  /** Screen px an ellipsis label for `count` hidden paths and `games` games needs (default: ellipsisMinPx). */
+  ellipsisPx?: (count: number, games: number) => number;
 }
 
 export interface Layout {
@@ -193,6 +198,8 @@ interface VNode {
   children: VNode[];
   hidden: TrieNode[] | null;
   hiddenMatches: number;
+  /** Width the node's own label needs (0 for the root). */
+  own: number;
   need: number;
   needL: number;
   needR: number;
@@ -202,8 +209,22 @@ interface VNode {
   x: number;
 }
 
-function vnode(kind: LKind, trie: TrieNode | null, mass: number, trunk: boolean): VNode {
-  return { kind, trie, mass, trunk, children: [], hidden: null, hiddenMatches: 0, need: 0, needL: 0, needR: 0, side: 0, left: 0, right: 0, x: 0 };
+function vnode(kind: LKind, trie: TrieNode | null, mass: number, trunk: boolean, own: number): VNode {
+  return { kind, trie, mass, trunk, children: [], hidden: null, hiddenMatches: 0, own, need: 0, needL: 0, needR: 0, side: 0, left: 0, right: 0, x: 0 };
+}
+
+const groupFmt = (n: number): string => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+/** The two lines of an ellipsis label: "… 37 more" over "58 games". */
+export function ellipsisText(count: number, games: number, fmtInt: (n: number) => string = groupFmt): [string, string] {
+  const g = Math.round(games);
+  return [`… ${fmtInt(count)} more`, `${fmtInt(g)} game${g === 1 ? '' : 's'}`];
+}
+
+/** Screen px an ellipsis label needs to be legible (its longer line at `fontPx`, plus padding). */
+export function ellipsisMinPx(count: number, games: number, advance = 0.6, fontPx = 10.5, fmtInt?: (n: number) => string): number {
+  const [a, b] = ellipsisText(count, games, fmtInt);
+  return Math.max([...a].length, [...b].length) * advance * fontPx + 8;
 }
 
 export function layoutTree(input: LayoutInput): Layout {
@@ -211,10 +232,12 @@ export function layoutTree(input: LayoutInput): Layout {
   const massOf = input.massOf ?? ((n: TrieNode) => n.mass);
   const expanded = input.expanded ?? new Map<number, number>();
   const matchesBelow = input.matchesBelow ?? (() => 0);
+  const ellipsisPx = input.ellipsisPx ?? ((c: number, g: number) => ellipsisMinPx(c, g));
   const L = Math.max(1, p.scale);
   const minW = p.minLabel / L;
   const N = p.maxGuesses;
   const total = Math.max(1, p.totalGames);
+  const EPS = 1e-6;
 
   // Forced ids plus their ancestors.
   const trunkIds = new Set<number>();
@@ -247,42 +270,73 @@ export function layoutTree(input: LayoutInput): Layout {
     out.sort((a, b) => massOf(b) - massOf(a) || a.guess - b.guess);
     return out;
   };
+  /** World width an ellipsis needs: a legible label and room for its river. */
+  const ellMin = (count: number, games: number): number => Math.max(minW, ellipsisPx(count, games) / L, riverPx(games, p.riverScale) * 1.15);
 
-  // Pass 1: visible structure.
+  // Pass 1: visible structure. A node shows its children in descending mass
+  // while they fit its width budget (minW each, plus the ellipsis for the
+  // rest), at most maxChildren; each tap on the ellipsis adds expandStep.
   const decide = (t: TrieNode, width: number, onTrunk: boolean, kind: 'root' | 'node'): VNode => {
-    const v = vnode(kind, t, kind === 'root' ? Math.max(massOf(t), 0) : massOf(t), onTrunk);
+    const v = vnode(kind, t, kind === 'root' ? Math.max(massOf(t), 0) : massOf(t), onTrunk, kind === 'root' ? 0 : minW);
     if (kind === 'node') {
       if (solved(t)) return v;
       if (t.depth >= N) {
-        v.children.push(vnode('out', t, v.mass, onTrunk));
+        v.children.push(vnode('out', t, v.mass, onTrunk, minW));
         return v;
       }
     }
-    const kids = candidates(t);
-    if (!kids.length) return v;
-    const slots = Math.max(1, Math.floor((width * L) / p.minLabel + 1e-6));
-    const k = visibleCount(kids.length, slots, p.maxChildren, expanded.get(t.id) ?? 0, p.expandStep);
-    let shown: TrieNode[] = kids;
+    const all = candidates(t);
+    if (!all.length) return v;
+    // On the trunk, the trunk child is always shown (it is forced) and the
+    // others alternate right and left of it, so each side has half the width.
+    const tcNode = onTrunk ? (all.find((c) => trunkIds.has(c.id)) ?? null) : null;
+    const kids = tcNode ? all.filter((c) => c !== tcNode) : all;
+    const n = kids.length;
+    const suffix = new Array<number>(n + 1).fill(0);
+    for (let i = n - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + massOf(kids[i]);
+    const fits = (k: number): boolean => {
+      const ell = k < n ? ellMin(n - k, suffix[k]) : 0;
+      if (!onTrunk) return k * minW + ell <= width + EPS;
+      const r = (tcNode ? minW / 2 : 0) + Math.ceil(k / 2) * minW;
+      const l = (tcNode ? minW / 2 : 0) + Math.floor(k / 2) * minW;
+      return Math.max(r, l, Math.min(r, l) + ell) <= width / 2 + EPS;
+    };
+    // The trunk child counts toward the cap.
+    const cap = Math.max(1, p.maxChildren - (tcNode ? 1 : 0));
+    let slots: number;
+    if (n <= cap && fits(n)) slots = n;
+    else {
+      let k = Math.min(cap, n - 1);
+      while (k > 0 && !fits(k)) k--;
+      slots = k + 1;
+    }
+    const k = n ? visibleCount(n, slots, cap, expanded.get(t.id) ?? 0, p.expandStep) : 0;
+    let shown: TrieNode[] = all;
     let hidden: TrieNode[] = [];
-    if (k < kids.length) {
-      shown = [];
-      for (let i = 0; i < kids.length; i++) {
+    if (k < n) {
+      shown = tcNode ? [tcNode] : [];
+      for (let i = 0; i < n; i++) {
         if (i < k || forced.has(kids[i].id)) shown.push(kids[i]);
         else hidden.push(kids[i]);
       }
       if (hidden.length === 1) {
-        shown = kids;
+        shown = all;
         hidden = [];
       }
+      shown.sort((a, b) => massOf(b) - massOf(a) || a.guess - b.guess);
     }
+    const mins = shown.map(() => minW);
     const masses = shown.map((c) => massOf(c));
     let hiddenMass = 0;
     for (const h of hidden) hiddenMass += massOf(h);
-    if (hidden.length) masses.push(hiddenMass);
-    const widths = waterFill(width, masses.map(() => minW), masses);
+    if (hidden.length) {
+      mins.push(ellMin(hidden.length, hiddenMass));
+      masses.push(hiddenMass);
+    }
+    const widths = waterFill(width, mins, masses);
     shown.forEach((c, i) => v.children.push(decide(c, widths[i], onTrunk && trunkIds.has(c.id), 'node')));
     if (hidden.length) {
-      const e = vnode('ellipsis', null, hiddenMass, false);
+      const e = vnode('ellipsis', null, hiddenMass, false, mins[mins.length - 1]);
       e.hidden = hidden;
       for (const h of hidden) e.hiddenMatches += matchesBelow(h);
       v.children.push(e);
@@ -292,51 +346,80 @@ export function layoutTree(input: LayoutInput): Layout {
   const rootV = decide(input.root, Math.max(p.width, minW), true, 'root');
   if (rootV.mass <= 0) rootV.mass = total;
 
-  // Pass 2: needs, bottom up: at least λ px per game (so slots are
-  // proportional to subtree games) and at least the label width. Trunk nodes
-  // need room on each side separately, so the tree may extend further on one
-  // side of the trunk than the other.
-  const lambda = p.width / total;
+  // Pass 2: needs, bottom up, for a width per game λ: every node needs its
+  // label width, its children's needs and λ px per game (so slots are
+  // proportional to subtree games where the labels allow). Trunk nodes need
+  // room on each side separately. λ is the largest value (at most
+  // width / totalGames, so the tree does not jump about while it grows) for
+  // which the heavier side of the trunk fits in half the width: the trunk
+  // stays centred and the whole tree fits on screen whenever its labels do.
   const trunkChild = (v: VNode): VNode | null => {
     for (const c of v.children) if (c.trunk) return c;
     return null;
   };
-  const measure = (v: VNode): void => {
-    for (const c of v.children) measure(c);
-    const own = v.kind === 'root' ? 0 : minW;
+  const measure = (v: VNode, lam: number, assign: boolean): void => {
+    for (const c of v.children) measure(c, lam, assign);
     if (!v.trunk) {
       let sum = 0;
       for (const c of v.children) sum += c.need;
-      v.need = Math.max(own, sum, lambda * v.mass);
+      v.need = Math.max(v.own, sum, lam * v.mass);
       v.needL = v.needR = v.need / 2;
       return;
     }
     const tc = trunkChild(v);
-    let next = 1;
+    if (assign) {
+      // Siblings alternate right and left by mass (heaviest nearest the
+      // trunk); the ellipsis goes on the side that needs less.
+      let next = 1;
+      let sR = 0;
+      let sL = 0;
+      let ell: VNode | null = null;
+      for (const c of v.children) {
+        if (c === tc) continue;
+        if (c.kind === 'ellipsis') {
+          ell = c;
+          continue;
+        }
+        c.side = next;
+        if (next > 0) sR += c.need;
+        else sL += c.need;
+        next = -next;
+      }
+      if (ell) ell.side = sR <= sL ? 1 : -1;
+    }
     let sumR = 0;
     let sumL = 0;
-    let ell: VNode | null = null;
     for (const c of v.children) {
       if (c === tc) continue;
-      if (c.kind === 'ellipsis') {
-        ell = c;
-        continue;
-      }
-      c.side = next;
-      if (next > 0) sumR += c.need;
+      if (c.side > 0) sumR += c.need;
       else sumL += c.need;
-      next = -next;
     }
-    if (ell) {
-      ell.side = sumR <= sumL ? 1 : -1;
-      if (ell.side > 0) sumR += ell.need;
-      else sumL += ell.need;
-    }
-    v.needR = Math.max(own / 2, (tc ? tc.needR : 0) + sumR);
-    v.needL = Math.max(own / 2, (tc ? tc.needL : 0) + sumL);
+    const base = tc ? 0 : (lam * v.mass) / 2;
+    v.needR = Math.max(v.own / 2, (tc ? tc.needR : 0) + sumR, base);
+    v.needL = Math.max(v.own / 2, (tc ? tc.needL : 0) + sumL, base);
     v.need = v.needL + v.needR;
   };
-  measure(rootV);
+  const half = p.width / 2;
+  const heavier = () => Math.max(rootV.needL, rootV.needR);
+  measure(rootV, 0, true);
+  let lam = 0;
+  const lamMax = p.width / total;
+  if (heavier() < half - EPS) {
+    measure(rootV, lamMax, false);
+    if (heavier() <= half + EPS) lam = lamMax;
+    else {
+      let lo = 0;
+      let hi = lamMax;
+      for (let i = 0; i < 32; i++) {
+        const mid = (lo + hi) / 2;
+        measure(rootV, mid, false);
+        if (heavier() <= half + EPS) lo = mid;
+        else hi = mid;
+      }
+      lam = lo;
+    }
+  }
+  measure(rootV, lam, false);
 
   // Pass 3: placement, top down.
   const place = (v: VNode, a: number, b: number): void => {
@@ -345,9 +428,9 @@ export function layoutTree(input: LayoutInput): Layout {
     if (v.trunk) {
       v.x = 0;
       const tc = trunkChild(v);
+      // Nearest the trunk first (the alternation order is by mass); the ellipsis outermost.
       const right = v.children.filter((c) => c !== tc && c.side > 0);
       const left = v.children.filter((c) => c !== tc && c.side < 0);
-      // Ellipsis outermost on its side.
       right.sort((x, y) => Number(x.kind === 'ellipsis') - Number(y.kind === 'ellipsis'));
       left.sort((x, y) => Number(x.kind === 'ellipsis') - Number(y.kind === 'ellipsis'));
       const side = (items: VNode[], avail: number, tcNeed: number): number[] => {

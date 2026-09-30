@@ -34,7 +34,7 @@ import {
 import { registerTreeControls, playNode } from './controls';
 import { drawTree, nodeGeom, type GeomCache } from './draw';
 import { computeTreeFilter, revealMatchIds, type TreeFilter } from './filtering';
-import { hitTest, type Hit } from './geom';
+import { ellipsisSlotPx, hitTest, type Hit } from './geom';
 import { growthTiming, advanceClock, revealCount, type GrowthTiming } from './growth';
 import { extendHeaviest, layoutTree, pathOf, type Layout, type LayoutParams } from './layout';
 import { Morph, type DNode } from './morph';
@@ -42,8 +42,10 @@ import { RevealState } from './reveal';
 import { CHOREO, measureBoard, rowProgress, smoothstep, type BoardRow } from './transition';
 import { setComputing, setMinimap, setTooltip, setUi, setViewport, silhouette, treeUi } from './ui.svelte';
 
-/** Screen px kept free on the left for the band labels. */
-const GUTTER = 64;
+/** Screen px kept free on the left for the band labels ("GUESS 1"). */
+const GUTTER = 60;
+/** Screen px between the tree and the edges of its viewport. */
+const SIDE_MARGIN = 12;
 const HEADER_H = 30;
 const MIN_LABEL = 56;
 const MAX_CHILDREN = 12;
@@ -95,7 +97,10 @@ class TreeLayer implements SceneLayer {
   private cam: CamState = { cx: 0, cy: 0, s: 1 };
   private camTarget: CamState | null = null;
   private camInit = false;
+  /** The tree's viewport: the uncovered canvas region right of the band-label gutter (camera, fit and layout use it). */
   private vp: Viewport = { left: 0, top: 0, width: 1, height: 1 };
+  /** The whole uncovered canvas region (DOM overlays, band labels). */
+  private fullVp: Viewport = { left: 0, top: 0, width: 1, height: 1 };
   private width = 1;
   private height = 1;
 
@@ -205,8 +210,10 @@ class TreeLayer implements SceneLayer {
     this.width = f.width;
     this.height = f.height;
     const v = ctx.viewport;
-    this.vp = v && v.width > 20 && v.height > 20 ? { ...v } : { left: 0, top: 0, width: f.width, height: f.height };
-    setViewport(this.vp);
+    this.fullVp = v && v.width > 20 && v.height > 20 ? { ...v } : { left: 0, top: 0, width: f.width, height: f.height };
+    const gutter = Math.min(GUTTER, this.fullVp.width * 0.2);
+    this.vp = { ...this.fullVp, left: this.fullVp.left + gutter, width: Math.max(1, this.fullVp.width - gutter) };
+    setViewport(this.fullVp);
 
     const words = app.words;
     const visible = !!words && z > 0.015 && z < 1.85;
@@ -459,7 +466,7 @@ class TreeLayer implements SceneLayer {
     const words = app.words!;
     const N = app.result.maxGuesses;
     const vp = this.vp;
-    const width = Math.max(260, vp.width - GUTTER - 24);
+    const width = Math.max(240, vp.width - 2 * SIDE_MARGIN);
     const bandHeight = Math.round(Math.min(84, Math.max(44, (vp.height - 40 - HEADER_H) / (N + 1))));
     const total = this.runTotal(tree);
     return {
@@ -513,12 +520,15 @@ class TreeLayer implements SceneLayer {
       params.bandHeight,
       params.maxGuesses,
       forced.length,
+      app.display.labelThreshold,
     ].join('|');
     const dataKey = `${tree.version}|${r.count}|${params.totalGames}`;
     const structChanged = structKey !== this.structKey;
     const dataChanged = dataKey !== this.dataKey;
     if (!structChanged && !dataChanged && this.layout) return false;
     if (!structChanged && this.layout && this.now - this.lastLayoutAt < DATA_RELAYOUT_MS) return false;
+    const advance = this.atlas.metrics.advance;
+    const threshold = app.display.labelThreshold;
     const layout = layoutTree({
       root: tree.root,
       params,
@@ -527,6 +537,7 @@ class TreeLayer implements SceneLayer {
       forced,
       expanded: this.expanded,
       matchesBelow: filter ? (n) => filter.below[n.id] ?? 0 : undefined,
+      ellipsisPx: (count, games) => ellipsisSlotPx(count, games, advance, threshold, fmtInt),
     });
     const first = !this.layout;
     this.layout = layout;
@@ -611,7 +622,9 @@ class TreeLayer implements SceneLayer {
     if (!this.layout || this.cam.s <= 0) return null;
     const words = app.words;
     if (!words) return null;
-    const inp = { s: this.cam.s, threshold: app.display.labelThreshold, advance: this.atlas.metrics.advance, words: words.guesses, fmtInt };
+    const params = this.params;
+    if (!params) return null;
+    const inp = { s: this.cam.s, threshold: app.display.labelThreshold, advance: this.atlas.metrics.advance, words: words.guesses, fmtInt, params };
     return hitTest(this.morph.order, e.world.x, e.world.y, this.cam.s, e.pointerType === 'touch' ? 44 : 28, (d) => nodeGeom(d, inp));
   }
 
@@ -838,7 +851,7 @@ class TreeLayer implements SceneLayer {
     if (reduced && this.growth.fadeStart > -Infinity) branchAlpha *= Math.min(1, Math.max(0, (this.now - this.growth.fadeStart) / 200));
     const hs = this.hoverSet();
     const view = this.viewRect(ctx, z);
-    const bandLabelX = z <= 1 && ctx.camera === 'ortho' ? ctx.screenToWorld(this.vp.left + 12, 0).x : this.boundsCur.minX - 70;
+    const bandLabelX = z <= 1 && ctx.camera === 'ortho' ? ctx.screenToWorld(this.fullVp.left + 12, 0).x : this.boundsCur.minX - 70;
     const total = this.runTotal(tree);
     const target = words.guesses[words.answers[tree.target]] ?? '';
     const caption = `${fmtInt(tree.totalMass)} GAME${tree.totalMass === 1 ? '' : 'S'} AGAINST ${target.toUpperCase()}`;
@@ -916,7 +929,9 @@ class TreeLayer implements SceneLayer {
     const s = this.cam.s;
     const px = 1 / s;
     const hand = 1 - smoothstep(CHOREO.handover[0], CHOREO.handover[1], z);
-    const inp = { s, threshold: 0, advance: this.atlas.metrics.advance, words: words.guesses, fmtInt };
+    const params = this.params;
+    if (!params) return;
+    const inp = { s, threshold: 0, advance: this.atlas.metrics.advance, words: words.guesses, fmtInt, params };
     // Trunk display nodes by depth.
     const trunk = new Map<number, DNode>();
     for (const d of this.morph.order) if (d.l.trunk && d.l.kind === 'node' && d.l.trie) trunk.set(d.l.trie.depth, d);
@@ -1014,8 +1029,9 @@ class TreeLayer implements SceneLayer {
     const b = this.boundsCur;
     const s = this.cam.s;
     const overflow = active && ((b.maxX - b.minX) * s > this.vp.width + 2 || (b.top - b.bottom) * s > this.vp.height + 2);
-    const tl = this.screenWorld(this.vp.left, this.vp.top);
-    const br = this.screenWorld(this.vp.left + this.vp.width, this.vp.top + this.vp.height);
+    const fv = this.fullVp;
+    const tl = this.screenWorld(fv.left, fv.top);
+    const br = this.screenWorld(fv.left + fv.width, fv.top + fv.height);
     const sk = `${this.structKey}|${this.dataKey}|${this.morph.animating ? 1 : 0}`;
     const bump = overflow && sk !== this.silhouetteKey && !this.morph.animating;
     if (bump) {

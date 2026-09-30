@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { atlasFrame, fadeToward, MAX_TILT, planeSlide, smoothstep, stackFrame, STACK_PLANES } from './choreo';
+import { atlasFrame, dipLevel, dipStep, fadeToward, MAX_TILT, planeSlide, smoothstep, stackFrame, STACK_PLANES, type DipState } from './choreo';
 
 describe('Tree → Card choreography', () => {
   it('starts at the tree and ends face-on at the card', () => {
@@ -82,5 +82,63 @@ describe('reduced motion', () => {
     expect(smoothstep(0, 1, -1)).toBe(0);
     expect(smoothstep(0, 1, 0.5)).toBe(0.5);
     expect(smoothstep(0, 1, 2)).toBe(1);
+  });
+});
+
+describe('reduced-motion dip', () => {
+  const run = (from: DipState, z: number, ms: number) => {
+    let s = from;
+    let t = 0;
+    let frames = 0;
+    while (t < 1000 && !(s.level === dipLevel(z) && s.alpha === 1)) {
+      s = dipStep(s, dipLevel(z), 16);
+      t += 16;
+      frames++;
+      void ms;
+    }
+    return { s, t, frames };
+  };
+
+  it('maps z to the level shown', () => {
+    expect(dipLevel(1)).toBe(1);
+    expect(dipLevel(1.49)).toBe(1);
+    expect(dipLevel(1.5)).toBe(2);
+    expect(dipLevel(2.6)).toBe(3);
+  });
+
+  it('fades the card in from the tree without a fade-out', () => {
+    const s1 = dipStep({ level: 1, alpha: 1 }, 2, 16);
+    expect(s1).toEqual({ level: 2, alpha: 0 });
+    const { s, t } = run({ level: 1, alpha: 1 }, 2, 0);
+    expect(s).toEqual({ level: 2, alpha: 1 });
+    expect(t).toBeLessThanOrEqual(200);
+  });
+
+  it('dips out and back in between card and atlas within 200 ms, switching the view only when invisible', () => {
+    let s: DipState = { level: 2, alpha: 1 };
+    let t = 0;
+    let switchedAt = -1;
+    while (!(s.level === 3 && s.alpha === 1)) {
+      const next = dipStep(s, 3, 10);
+      if (next.level !== s.level) {
+        expect(s.alpha === 0 || next.alpha === 0).toBe(true);
+        switchedAt = t;
+      }
+      s = next;
+      t += 10;
+      expect(t).toBeLessThan(400);
+    }
+    expect(switchedAt).toBeGreaterThan(0);
+    expect(t).toBeLessThanOrEqual(200);
+  });
+
+  it('reverses mid-dip', () => {
+    let s: DipState = { level: 2, alpha: 1 };
+    s = dipStep(s, 3, 40);
+    expect(s.level).toBe(2);
+    expect(s.alpha).toBeLessThan(1);
+    s = dipStep(s, 2, 40);
+    expect(s.level).toBe(2);
+    expect(s.alpha).toBeGreaterThan(0.5);
   });
 });

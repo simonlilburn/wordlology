@@ -145,6 +145,8 @@ export interface ProgressEvent {
   settledDepth?: number;
   /** Deterministic runs: games still unresolved. */
   unresolved?: number;
+  /** Phase labels of the strategy (sent with a run's first progress event; the summary repeats them). */
+  phases?: string[];
 }
 
 export interface SummaryEvent {

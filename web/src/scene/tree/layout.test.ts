@@ -137,9 +137,12 @@ describe('layoutTree', () => {
     const ell = opener.children.find((c) => c.kind === 'ellipsis')!;
     expect(ell).toBeTruthy();
     const shown = opener.children.filter((c) => c.kind === 'node');
-    // 400 px / 56 px = 7 slots: 6 children plus the ellipsis.
-    expect(shown.length).toBe(6);
-    expect(ell.hidden!.length).toBe(31 - 6);
+    // 400 px: 200 px either side of the trunk, which takes half a label
+    // (28 px) from each; 56 px per label, and the ellipsis needs room for its
+    // river (0.2 px per game): the trunk child and 3 others plus the ellipsis.
+    expect(shown.length).toBe(4);
+    expect(ell.hidden!.length).toBe(31 - 4);
+    expect(ell.right - ell.left).toBeGreaterThanOrEqual(ell.riverWidth);
     const hiddenGames = ell.hidden!.reduce((s, n) => s + n.mass, 0);
     expect(ell.mass).toBe(hiddenGames);
     expect(ell.riverWidth).toBeCloseTo(riverPx(hiddenGames, 0.2));
@@ -269,6 +272,72 @@ describe('layoutTree', () => {
     const L = layoutTree({ root: t.root, params: params(), trunk: pathOf(keep), massOf });
     expect(L.byTrie.has(t.find([1, 3])!.id)).toBe(false);
     expect(L.byTrie.has(keep.id)).toBe(true);
+  });
+});
+
+describe('layoutTree fits the width', () => {
+  // A broad tree like info-proportional play after a fixed opener: one heavy
+  // trunk child and many light siblings.
+  function broad() {
+    const t = fixtureTree();
+    t.add([1, 100], { solved: true, times: 4 });
+    let seed = 3;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+    for (let g = 0; g < 50; g++) {
+      const n = 1 + Math.floor(rnd() * rnd() * 12);
+      for (let i = 0; i < n; i++) t.add([1, 200 + g, 400 + Math.floor(rnd() * 6)], { solved: true });
+    }
+    return t;
+  }
+
+  it('keeps the trunk centred with both sides within half the width', () => {
+    const t = broad();
+    const trunk = pathOf(t.find([1, 100])!);
+    const total = t.root.mass;
+    const L = layoutTree({ root: t.root, params: params({ totalGames: total, width: 850 }), trunk });
+    expect(L.maxX).toBeLessThanOrEqual(425 + 1e-6);
+    expect(L.minX).toBeGreaterThanOrEqual(-425 - 1e-6);
+    // The heavier side reaches the edge (the tree uses the width it has).
+    expect(Math.max(L.maxX, -L.minX)).toBeGreaterThan(425 - 1);
+    const ell = L.nodes.find((n) => n.kind === 'ellipsis' && n.parent?.trie === t.find([1]));
+    expect(ell).toBeTruthy();
+    expect(Math.abs(ell!.x)).toBeLessThan(425);
+    expect(ell!.right - ell!.left).toBeGreaterThanOrEqual(ell!.riverWidth);
+  });
+
+  it('gives a node with room for one label an ellipsis rather than hiding it', () => {
+    const t = broad();
+    const trunk = pathOf(t.find([1, 100])!);
+    const L = layoutTree({ root: t.root, params: params({ totalGames: t.root.mass, width: 850 }), trunk });
+    const guess2 = L.nodes.filter((n) => n.band === 2 && n.kind === 'node' && !n.trunk);
+    expect(guess2.length).toBeGreaterThan(4);
+    for (const n of guess2) {
+      const kids = n.trie!.children.length;
+      if (kids === 0) continue;
+      // Every stream of a shown node is accounted for: shown children or one ellipsis.
+      const shownGames = n.children.reduce((s, c) => s + c.mass, 0);
+      expect(shownGames).toBe(n.mass);
+      if (kids > 1 && n.right - n.left < 2 * 56) expect(n.children.map((c) => c.kind)).toEqual(['ellipsis']);
+    }
+  });
+
+  it('keeps slots ∝ games on both sides of the trunk while the tree is sparse', () => {
+    const t = fixtureTree();
+    t.add([1, 2], { solved: true, times: 10 });
+    t.add([1, 3], { solved: true, times: 60 });
+    t.add([1, 4], { solved: true, times: 30 });
+    const L = layoutTree({ root: t.root, params: params({ width: 1000 }), trunk: pathOf(t.find([1, 2])!) });
+    expect(L.maxX).toBeLessThanOrEqual(500 + 1e-6);
+    expect(L.minX).toBeGreaterThanOrEqual(-500 - 1e-6);
+  });
+
+  it('holds positions steady while games are still arriving (λ ≤ width / total)', () => {
+    const t = fixtureTree();
+    t.add([1, 2], { solved: true, times: 3 });
+    t.add([1, 3], { solved: true, times: 1 });
+    const L = layoutTree({ root: t.root, params: params({ width: 1000, totalGames: 200 }), trunk: pathOf(t.find([1, 2])!) });
+    // 4 of 200 games: the tree is narrow, not stretched over the whole width.
+    expect(L.maxX - L.minX).toBeLessThan(300);
   });
 });
 

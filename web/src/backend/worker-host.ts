@@ -39,6 +39,8 @@ interface Job {
   paused: boolean;
   lastSlice: number;
   lastProgress: number;
+  /** Phase labels were sent with an earlier progress event. */
+  sentPhases?: boolean;
 }
 
 export interface WorkerHost {
@@ -239,6 +241,17 @@ export function createWorkerHost(deps: HostDeps): WorkerHost {
 
   function sendProgress(job: Job, solver: Solver): void {
     const p = normaliseProgress(JSON.parse(solver.progress(job.handle)));
+    // The first progress event carries the strategy's phase labels, so partial
+    // results (and partial exports) can name phases before the summary arrives.
+    if (!job.sentPhases) {
+      job.sentPhases = true;
+      try {
+        const phases = normaliseSummary(JSON.parse(solver.summary(job.handle))).phases;
+        if (phases.length) p.phases = phases;
+      } catch {
+        /* the summary will carry them */
+      }
+    }
     post({ type: 'progress', runId: job.runId, ...p });
     job.lastProgress = now();
   }

@@ -230,14 +230,17 @@ function drawFullRows(
         g.fillRect(FACE.plotLeft, cy - 2, bw, 4);
       }
     }
-    // Count and percentage at the right edge.
+    // Count and percentage at the right edge. A deterministic card's settled
+    // rows are final (every game ending there is known), so only estimates
+    // carry the provisional "~".
+    const rowProvisional = provisional && !d.deterministic;
     g.textAlign = 'right';
     g.fillStyle = rgbCss(lab);
     g.font = `650 14px ${o.sans}`;
-    g.fillText(fmtPercent(d.shares[i], provisional), CARD_W - FACE.pad, cy - 6);
+    g.fillText(fmtPercent(d.shares[i], rowProvisional), CARD_W - FACE.pad, cy - 6);
     g.font = `400 10.5px ${o.sans}`;
     g.fillStyle = rgbCss(lab, 0.86);
-    g.fillText(fmtCount(d.counts[i], provisional), CARD_W - FACE.pad, cy + 9);
+    g.fillText(fmtCount(d.counts[i], rowProvisional), CARD_W - FACE.pad, cy + 9);
   }
 }
 

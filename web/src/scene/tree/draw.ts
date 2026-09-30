@@ -69,12 +69,15 @@ function wordOf(d: DNode, words: readonly string[]): string {
   return (words[t.guess] ?? '?????').toUpperCase();
 }
 
-export function nodeGeom(d: DNode, inp: Pick<DrawInput, 's' | 'threshold' | 'advance' | 'words' | 'fmtInt'>): LabelGeom {
-  return labelGeom(d.l, wordOf(d, inp.words), inp.s, inp.threshold, inp.advance, inp.fmtInt);
+/** A solved game's last guess (strategy games end here, or the player's path does). */
+export function isSolvedLeaf(t: TrieNode, solvedCode: number): boolean {
+  return t.pattern === solvedCode && (t.endSolved > 0 || t.player);
 }
 
-function isSolvedLeaf(t: TrieNode, solvedCode: number): boolean {
-  return t.pattern === solvedCode && t.endSolved > 0;
+export function nodeGeom(d: DNode, inp: Pick<DrawInput, 's' | 'threshold' | 'advance' | 'words' | 'fmtInt' | 'params'>): LabelGeom {
+  const t = d.l.trie;
+  const solved = d.l.kind === 'node' && !!t && isSolvedLeaf(t, inp.params.solvedCode);
+  return labelGeom(d.l, wordOf(d, inp.words), inp.s, inp.threshold, inp.advance, inp.fmtInt, solved);
 }
 
 export function drawTree(inp: DrawInput, out: DrawOutput, geomCache: GeomCache): void {
@@ -132,8 +135,11 @@ export function drawTree(inp: DrawInput, out: DrawOutput, geomCache: GeomCache):
     if (d.l.trunk && (!trunkLeaf || d.l.band > trunkLeaf.l.band)) trunkLeaf = d;
     if (!d.parent || d.alpha <= 0.003) continue;
     const par = d.parent;
+    // The trunk starts at the opener: no river from the caption to a fixed
+    // opener; several first guesses fan out from the top rule.
+    if (par.l.kind === 'root' && par.l.children.length <= 1) continue;
     const x0 = par.x + d.ro;
-    const y0 = par.y;
+    const y0 = par.l.kind === 'root' ? bandTop(1, p) : par.y;
     if (view) {
       const lo = Math.min(x0, d.x) - d.rw;
       const hi = Math.max(x0, d.x) + d.rw;
@@ -234,10 +240,7 @@ export function drawTree(inp: DrawInput, out: DrawOutput, geomCache: GeomCache):
       else {
         const c = onHover || match ? pal.accent : fgC;
         quads.add(d.x, d.y, Math.max(tw, 2 * px), 2 * px, c[0], c[1], c[2], a * 0.75);
-        if (t && isSolvedLeaf(t, p.solvedCode)) {
-          const r = Math.max(3 * px, Math.min(6 * px, tw * 0.5));
-          quads.add(d.x, d.y - 4 * px, r, r, pal.correct[0], pal.correct[1], pal.correct[2], a, r / 2);
-        }
+        if (g.tile > 0) quads.add(d.x, d.y - g.tileDy, g.tile, g.tile, pal.correct[0], pal.correct[1], pal.correct[2], a, g.tile * 0.25);
       }
       continue;
     }
@@ -287,11 +290,10 @@ export function drawTree(inp: DrawInput, out: DrawOutput, geomCache: GeomCache):
         const c = pal.cells[cells[j] ?? 0];
         quads.add(x0 + (j + 0.5) * adv, sy, Math.max(px, adv - 1.5 * px), g.stripH, c[0], c[1], c[2], la, 0.5 * px);
       }
-      if (isSolvedLeaf(t, p.solvedCode)) {
-        const ts = g.font * 1.35;
-        const tx = d.x + g.w / 2 + ts / 2 + 3 * px;
-        quads.add(tx, d.y, ts, ts, pal.correct[0], pal.correct[1], pal.correct[2], la, 2 * px);
-        text.add('✓', tx, d.y, g.font, pal.tileText[0], pal.tileText[1], pal.tileText[2], la);
+      if (g.tile > 0) {
+        const ty = d.y - g.tileDy;
+        quads.add(d.x, ty, g.tile, g.tile, pal.correct[0], pal.correct[1], pal.correct[2], la, 2 * px);
+        text.add('✓', d.x, ty, g.tile * 0.72, pal.tileText[0], pal.tileText[1], pal.tileText[2], la);
       }
     }
   }

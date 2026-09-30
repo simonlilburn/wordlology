@@ -142,6 +142,8 @@ export function handleCardPointer(e: ScenePointerEvent): boolean {
   const level = settledAt();
   if (level === null) return false;
   if (e.kind !== 'click' && e.kind !== 'dblclick' && e.kind !== 'contextmenu' && e.kind !== 'longpress') return false;
+  // A right-click also ends in a click (button 2): the context menu already took it.
+  if ((e.kind === 'click' || e.kind === 'dblclick') && e.button > 0) return cellAt(e.x, e.y) !== null;
   const hit = cellAt(e.x, e.y);
   if (!hit) {
     if (e.kind === 'click' && cardUi.menu) {

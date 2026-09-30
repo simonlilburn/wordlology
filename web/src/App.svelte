@@ -1,5 +1,6 @@
 <script lang="ts">
   // Layout shell. Each area owns its component; this file only places them.
+  // (The export dialog is mounted by panes/Dialogs.svelte.)
   import SceneCanvas from './scene/SceneCanvas.svelte';
   import GameView from './views/game/GameView.svelte';
   import SidePane from './panes/SidePane.svelte';
@@ -10,7 +11,6 @@
   import StrategyLab from './lab/StrategyLab.svelte';
   import Dialogs from './panes/Dialogs.svelte';
   import Toasts from './app/Toasts.svelte';
-  import ExportDialog from './export/ExportDialog.svelte';
   import { app } from './app/store.svelte';
 </script>
 
@@ -24,7 +24,6 @@
   <SidePane />
   <StrategyLab />
   <Dialogs />
-  <ExportDialog />
   <Toasts />
 </div>
 

@@ -121,6 +121,9 @@ describe.skipIf(!hasWasm)('the WASM solver in-process', () => {
     expect(progress.at(-1)).toMatchObject({ done: 300, total: 300 });
     // Deterministic runs settle top-down.
     expect(progress.some((p) => p.settledDepth !== undefined)).toBe(true);
+    // The first progress event names the phases (partial exports need them before the summary).
+    expect(progress[0].phases).toEqual(summary.phases);
+    expect(progress.slice(1).every((p) => p.phases === undefined)).toBe(true);
     const card = cardStats(games, 6, 300, true);
     expect(card.mean).toBeGreaterThan(2.5);
     expect(card.mean).toBeLessThan(5);
