@@ -19,8 +19,8 @@ describe('feedback', () => {
   it('marks greens first, then yellows left to right', () => {
     // SPEED against ABIDE: absent, absent, present, absent, present.
     expect(patternLetters(feedback('speed', 'abide'), 5)).toBe('bbyby');
-    // Only one E is left for a yellow after the green.
-    expect(patternLetters(feedback('eerie', 'crepe'), 5)).toBe('ybgbg');
+    // CREPE has two Es: one is green (last), so only the first E of EERIE is yellow.
+    expect(patternLetters(feedback('eerie', 'crepe'), 5)).toBe('ybybg');
   });
 
   it('is all correct against itself, and every target is consistent with its own feedback', () => {
