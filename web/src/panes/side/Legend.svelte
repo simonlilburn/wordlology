@@ -1,11 +1,45 @@
 <script lang="ts">
   // Legend: tile colours with their marks, the river width scale, and the filter accent.
+  import { onMount } from 'svelte';
   import { app } from '../../app/store.svelte';
   import { filterActive } from '../../model/filter';
   import { paneState } from '../state.svelte';
   import { fmtNum } from '../util';
 
-  const scale = $derived(paneState.riverGamesPerPx);
+  // The tree layer may export riverScale(): screen px of ribbon per game at the
+  // current zoom. Loaded lazily if the module exists; otherwise the legend reads
+  // paneState.riverGamesPerPx (games per px), which the tree layer may publish.
+  const treeModules = import.meta.glob('../../scene/tree/index.ts');
+  let pxPerGame = $state(0);
+
+  onMount(() => {
+    const load = treeModules['../../scene/tree/index.ts'];
+    if (!load) return;
+    let timer = 0;
+    let stopped = false;
+    load()
+      .then((m) => {
+        const f = (m as { riverScale?: unknown }).riverScale;
+        if (typeof f !== 'function' || stopped) return;
+        const read = () => {
+          try {
+            const v = Number((f as () => unknown)());
+            pxPerGame = Number.isFinite(v) && v > 0 ? v : 0;
+          } catch {
+            pxPerGame = 0;
+          }
+        };
+        read();
+        timer = window.setInterval(read, 500);
+      })
+      .catch(() => {});
+    return () => {
+      stopped = true;
+      if (timer) clearInterval(timer);
+    };
+  });
+
+  const scale = $derived(pxPerGame > 0 ? 1 / pxPerGame : paneState.riverGamesPerPx);
   const tiles = [
     { cls: 'correct', letter: 'C', text: 'Right letter, right place', mark: 'filled dot' },
     { cls: 'present', letter: 'R', text: 'In the word, elsewhere', mark: 'hollow ring' },

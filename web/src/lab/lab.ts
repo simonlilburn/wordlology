@@ -295,8 +295,8 @@ export interface CostWarning {
 /**
  * Warn when an information-based stochastic strategy scores the full allowed
  * pool: every new state it reaches costs (allowed guesses) × |C| lookups.
- * `globalPool` is the result setting "Stochastic guess pool", which applies to
- * specs that leave their pool unset.
+ * `globalPool` is the result setting "Stochastic guess pool"; 'allowed' there
+ * applies to every information-based stochastic part.
  */
 export function costWarnings(
   spec: StrategySpec,
@@ -307,7 +307,9 @@ export function costWarnings(
   for (const s of walkSpec(spec, schemas)) {
     const a = s as unknown as AnySpec;
     if (a.kind !== 'info_proportional') continue;
-    const pool = (a.pool as string | undefined) ?? env.globalPool ?? 'candidates';
+    // The "Stochastic guess pool" setting, when 'allowed', overrides every
+    // info_proportional pool (app/config.ts applyPoolSetting).
+    const pool = env.globalPool === 'allowed' ? 'allowed' : ((a.pool as string | undefined) ?? 'candidates');
     if (pool !== 'allowed') continue;
     const est = (targets: number, r: number) => {
       // About 2.5 fresh states per game after the opener, averaging ~30 candidates,

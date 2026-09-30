@@ -30,7 +30,9 @@
       lastCommitted = t;
       drafts = textToDrafts(t, l);
       text = t;
-      error = null;
+      // A filter from a link (or a list with another word length) may not parse: say where.
+      const r = t.trim() ? parseFilter(t, l) : null;
+      error = r && !r.ok ? { message: r.error, at: r.at } : null;
       selected = null;
     }
     if (f) {

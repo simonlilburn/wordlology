@@ -5,6 +5,7 @@
   import { focusData } from '../../model/focus';
   import type { TrieNode } from '../../model/types';
   import { live } from '../live.svelte';
+  import { isSpoiler } from '../services';
   import { attempt, fmtInt, fmtProb } from '../util';
   import FeedbackStrip from './FeedbackStrip.svelte';
 
@@ -22,7 +23,7 @@
     const id = app.focus.node;
     const tree = focusData.tree;
     const words = app.words;
-    if (id < 0 || !tree || !words) return null;
+    if (id < 0 || !tree || !words || isSpoiler(tree.target)) return null;
     const node = tree.nodes[id];
     if (!node) return null;
     const path = pathOf(node);

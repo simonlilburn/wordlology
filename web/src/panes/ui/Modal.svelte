@@ -9,7 +9,19 @@
     width = 480,
     children,
     labelledby,
-  }: { title: string; onclose: () => void; width?: number; children: Snippet; labelledby?: string } = $props();
+    fill = false,
+    actions,
+  }: {
+    title: string;
+    onclose: () => void;
+    width?: number;
+    children: Snippet;
+    labelledby?: string;
+    /** Take most of the window (full screen on phones), for large editors such as the Strategy Lab. */
+    fill?: boolean;
+    /** Extra header content (buttons) before the close button. */
+    actions?: Snippet;
+  } = $props();
 
   let box = $state<HTMLElement | null>(null);
   const id = `modal-${Math.random().toString(36).slice(2, 8)}`;
@@ -57,6 +69,7 @@
   <div
     bind:this={box}
     class="box"
+    class:fill
     role="dialog"
     aria-modal="true"
     aria-labelledby={labelledby ?? id}
@@ -66,7 +79,10 @@
   >
     <header>
       <h2 id={id}>{title}</h2>
-      <button type="button" class="close" onclick={onclose} aria-label="Close">×</button>
+      <div class="hbtns">
+        {#if actions}{@render actions()}{/if}
+        <button type="button" class="close" onclick={onclose} aria-label="Close">×</button>
+      </div>
     </header>
     <div class="body">
       {@render children()}
@@ -96,6 +112,26 @@
     box-shadow: 0 20px 60px rgb(0 0 0 / 0.3);
     overflow: hidden;
   }
+  .box.fill {
+    height: min(92vh, 900px);
+    max-height: none;
+  }
+  @media (max-width: 720px) {
+    .backdrop:has(.fill) {
+      padding: 0;
+    }
+    .box.fill {
+      height: 100%;
+      max-width: none !important;
+      border-radius: 0;
+      border: 0;
+    }
+  }
+  .hbtns {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
   header {
     display: flex;
     align-items: center;
@@ -124,5 +160,12 @@
     padding: 12px 16px 16px;
     overflow-y: auto;
     min-height: 0;
+  }
+  .fill .body {
+    flex: 1;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 </style>

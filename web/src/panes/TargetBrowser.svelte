@@ -3,19 +3,18 @@
   // A strip across the top of the Tree view that flips through other targets'
   // trees in the same configuration. Data: the focused card run's games
   // grouped by target (R games per target), so no extra solver work is needed.
-  import { onMount } from 'svelte';
-  import { focusTarget } from '../app/actions';
-  import { registerShortcut } from '../app/keyboard';
+  import { onMount, tick } from 'svelte';
+  import { focusTarget, setTargetOrder } from '../app/actions';
   import { app } from '../app/store.svelte';
   import { compileFilter } from '../model/filter';
   import { allTargets, syncTargets, targetIndex, targets } from './browser/targets.svelte';
   import { firstWithLetter, layoutThumb, sortTargets } from './browser/stats';
   import { drawThumb, THUMB_H, THUMB_W } from './browser/thumbs';
   import { gamesTouching } from './filter/builder';
-  import { live } from './live.svelte';
+  import { live, startLive } from './live.svelte';
   import { answerWord, isSpoiler } from './services';
   import { paneState, type TargetSort } from './state.svelte';
-  import { clamp, fmtNum, fmtPct } from './util';
+  import { attempt, clamp, fmtNum, fmtPct } from './util';
 
   const SIDE = 8;
   const GAP = 92; // centre to the first side cover (px)
@@ -59,8 +58,10 @@
     return o;
   });
 
+  // Publish the order: the platform's , and . shortcuts step through it.
   $effect(() => {
     paneState.targetOrder = order;
+    attempt(() => setTargetOrder(spoiler >= 0 ? order.filter((t) => t !== spoiler) : order), undefined);
   });
 
   $effect(() => {
@@ -113,14 +114,13 @@
   }
 
   function flipTo(index: number) {
-    const i = clamp(Math.round(index), 0, order.length - 1);
+    let i = clamp(Math.round(index), 0, order.length - 1);
+    // The player's unsolved target is never opened (its tree would give the answer away).
+    if (order[i] === spoiler) i = i >= centre ? i + 1 : i - 1;
     const t = order[i];
-    if (t === undefined || t === app.focus.target) return;
-    try {
-      focusTarget(t);
-    } catch {
-      // Platform not ready.
-    }
+    if (t === undefined || t === spoiler || t === app.focus.target) return;
+    // Already at the Tree view: the tree morphs in place.
+    attempt(() => focusTarget(t, false), undefined);
   }
 
   function flip(delta: number) {
@@ -212,6 +212,8 @@
     flipTo(i);
   }
 
+  let coversEl = $state<HTMLElement | null>(null);
+
   function onStripKey(e: KeyboardEvent) {
     if (e.key === 'ArrowLeft') flip(-1);
     else if (e.key === 'ArrowRight') flip(1);
@@ -220,6 +222,8 @@
     else return;
     e.preventDefault();
     e.stopPropagation();
+    // Keep keyboard focus on the new centre cover.
+    void tick().then(() => coversEl?.querySelector<HTMLElement>('.cover.centre')?.focus());
   }
 
   // A–Z scrubber (alphabetical order only).
@@ -276,16 +280,10 @@
   const centreInfo = $derived(centreTarget >= 0 ? coverInfo(centreTarget) : null);
 
   onMount(() => {
-    // Follow the browser's order with , and . when it is not alphabetical (the
-    // platform's defaults step alphabetically).
-    const when = () => shown && paneState.targetSort !== 'alpha';
-    const offs = [
-      registerShortcut({ keys: [','], description: 'Previous target (browser order)', when, handler: () => flip(-1) }),
-      registerShortcut({ keys: ['.'], description: 'Next target (browser order)', when, handler: () => flip(1) }),
-    ];
+    startLive();
     return () => {
-      for (const off of offs) off();
       if (raf) cancelAnimationFrame(raf);
+      queue.clear();
     };
   });
 </script>
@@ -338,19 +336,17 @@
 
     <div class="stage-wrap">
       <button type="button" class="nav prev" onclick={() => flip(-1)} disabled={centre <= 0} aria-label="Previous target">‹</button>
+      <!-- Drag and wheel surface; keyboard users flip with the arrow keys on the centre cover, or , and . -->
       <div
         class="stage"
-        role="group"
-        aria-label="Targets. Use the arrow keys to flip."
-        tabindex="0"
+        role="presentation"
         onpointerdown={onDown}
         onpointermove={onMove}
         onpointerup={onUp}
         onpointercancel={onUp}
         onwheel={onWheel}
-        onkeydown={onStripKey}
       >
-        <div class="covers">
+        <div class="covers" bind:this={coversEl}>
           {#each visible as i (order[i])}
             {@const t = order[i]}
             {@const info = coverInfo(t)}
@@ -361,6 +357,8 @@
               style={coverStyle(i)}
               tabindex={i === centre ? 0 : -1}
               aria-current={i === centre ? 'true' : undefined}
+              aria-keyshortcuts="ArrowLeft ArrowRight Home End"
+              onkeydown={onStripKey}
               aria-label="{info.hidden ? 'Your current target (hidden)' : info.label}{info.stats
                 ? `: mean ${fmtNum(info.stats.mean)} guesses, ${fmtPct(info.stats.failRate, 0)} not solved`
                 : ''}"

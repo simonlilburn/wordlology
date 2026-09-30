@@ -2,6 +2,7 @@
   // Opener: a text field validated against the guess list, "strategy's choice", and recent openers.
   import { setOpener } from '../../app/actions';
   import { app } from '../../app/store.svelte';
+  import { openerProblem } from '../opener';
   import { openOpenerPicker } from '../state.svelte';
 
   let { inputEl = $bindable(null) }: { inputEl?: HTMLInputElement | null } = $props();
@@ -12,12 +13,8 @@
 
   /** Validation message, or '' when the word is playable (or nothing is typed). */
   const problem = $derived.by(() => {
-    if (!word) return '';
-    if (!/^[a-z]+$/.test(word)) return 'Letters only.';
-    if (word.length < len) return `${len - word.length} more letter${len - word.length === 1 ? '' : 's'}.`;
-    if (word.length > len) return `Openers have ${len} letters.`;
-    if (app.words && !app.words.index.has(word)) return `${word.toUpperCase()} is not in the guess list.`;
-    return '';
+    const index = app.words?.index;
+    return openerProblem(text, len, index ? (w) => index.has(w) : null);
   });
   const valid = $derived(!!word && !problem);
 

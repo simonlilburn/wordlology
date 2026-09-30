@@ -17,7 +17,6 @@
   import StrategyPicker from './side/StrategyPicker.svelte';
   import { paneState, type SheetState } from './state.svelte';
   import { clamp } from './util';
-  import OpenerPicker from './OpenerPicker.svelte';
 
   const PANE_WIDTH = 340;
   const COLLAPSED_H = 72;
@@ -69,13 +68,13 @@
     await reveal();
     const list = paneEl?.querySelector('[data-strategy-list]');
     const btn = (list?.querySelector('button[aria-pressed="true"]') ?? list?.querySelector('button:not(:disabled)')) as HTMLButtonElement | null;
-    btn?.scrollIntoView({ block: 'nearest' });
+    btn?.scrollIntoView?.({ block: 'nearest' });
     btn?.focus();
   }
 
   async function focusOpener() {
     await reveal();
-    openerInput?.scrollIntoView({ block: 'nearest' });
+    openerInput?.scrollIntoView?.({ block: 'nearest' });
     openerInput?.focus();
   }
 
@@ -86,7 +85,7 @@
     await reveal();
     if (paneState.phone) paneState.sheet = 'full';
     await tick();
-    filterText?.scrollIntoView({ block: 'nearest' });
+    filterText?.scrollIntoView?.({ block: 'nearest' });
     filterText?.focus();
   }
 
@@ -188,8 +187,6 @@
   });
 </script>
 
-<OpenerPicker />
-
 {#if !paneState.phone && !app.ui.paneOpen && shown}
   <button type="button" class="reopen" style:opacity onclick={() => (app.ui.paneOpen = true)} aria-label="Show side pane">
     <span aria-hidden="true">☰</span>
@@ -198,6 +195,8 @@
 
 <aside
   bind:this={paneEl}
+  data-side-pane
+  data-covers={!shown ? 'none' : paneState.phone ? 'bottom' : app.ui.paneOpen ? 'right' : 'none'}
   class="pane"
   class:phone={paneState.phone}
   class:closed={!paneState.phone && !app.ui.paneOpen}

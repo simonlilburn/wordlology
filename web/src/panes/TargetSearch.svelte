@@ -3,14 +3,17 @@
   // renders only while app.ui.search is true.
   // Type a word, or pick from the list sorted by guesses (hardest first, from
   // the focused card run); choosing jumps to that target's Tree view.
+  import { onMount } from 'svelte';
   import { focusTarget, setLevel } from '../app/actions';
   import { app } from '../app/store.svelte';
   import { sortTargets } from './browser/stats';
   import { allTargets, syncTargets, targetIndex, targets } from './browser/targets.svelte';
-  import { live } from './live.svelte';
+  import { live, startLive } from './live.svelte';
   import { answerWord } from './services';
   import Modal from './ui/Modal.svelte';
   import { fmtNum, fmtPct } from './util';
+
+  onMount(startLive);
 
   let query = $state('');
   let active = $state(0);
@@ -89,7 +92,7 @@
       choose(exact >= 0 ? exact : (results[active] ?? -1));
     } else return;
     e.preventDefault();
-    listEl?.querySelector(`#search-opt-${active}`)?.scrollIntoView({ block: 'nearest' });
+    listEl?.querySelector(`#search-opt-${active}`)?.scrollIntoView?.({ block: 'nearest' });
   }
 </script>
 

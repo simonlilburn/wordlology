@@ -14,15 +14,19 @@
 // - `paneState.occluded` ({ top, right, bottom } in CSS px): how much of the
 //   window the panes currently cover (side pane on the right on desktop, the
 //   bottom sheet on phones, the target browser strip at the top). The scene may
-//   use it to compute `SceneContext.viewport`.
+//   use it to compute `SceneContext.viewport`. The side pane's root element
+//   also carries `data-side-pane` and `data-covers="right" | "bottom" | "none"`
+//   ("none" while it is hidden on the Game board or closed), for code that
+//   prefers measuring the DOM.
 //
 // - `paneState.targetOrder` (answer indices): the target browser's current sort
-//   order; `neighbourTarget(delta)` returns the previous/next target in it, so
-//   the , and . shortcuts can follow the browser's order.
+//   order. The browser also hands it to the platform's `setTargetOrder`, so the
+//   , and . shortcuts (app/actions.ts `stepTarget`) follow the browser's order.
 //
-// - `paneState.riverGamesPerPx` (number, 0 = unknown): the tree layer may
-//   publish its river width scale here (games per CSS pixel of ribbon width at
-//   the current zoom); the legend then reads "1 px = n games".
+// - River scale for the legend: if `scene/tree/index.ts` exports
+//   `riverScale()` (CSS px of ribbon per game at the current zoom), the legend
+//   polls it; otherwise the tree layer may publish `paneState.riverGamesPerPx`
+//   (games per CSS px, 0 = unknown). The legend then reads "1 px = n games".
 //
 // - Opener picker: `openOpenerPicker(mode)` opens it. `mode` is
 //   `'atlas-row'` (the card's dashed "+ Opener" card: the chosen opener is
@@ -82,17 +86,6 @@ export function openOpenerPicker(mode: OpenerPickerMode): void {
 export function closeOpenerPicker(): void {
   app.ui.openerPicker = false;
   paneState.openerPickerMode = 'atlas-row';
-}
-
-/** Previous (-1) or next (+1) target in the target browser's order, or null. */
-export function neighbourTarget(delta: number): number | null {
-  const order = paneState.targetOrder;
-  if (!order.length) return null;
-  const i = order.indexOf(app.focus.target);
-  if (i < 0) return order[0];
-  const j = i + delta;
-  if (j < 0 || j >= order.length) return null;
-  return order[j];
 }
 
 /** The level the app is at or heading to (rounded). */

@@ -1,8 +1,10 @@
 // Saved strategies in this browser (localStorage). app.saved is the live list;
-// the Lab loads it once at start and writes it back whenever it changes.
+// the Lab loads it once at start and writes it back whenever it changes. The
+// key and format (a plain JSON array of entries) are the ones app/settings.ts
+// restores at start-up, so both sides read and write the same record.
 import type { StrategyEntry } from '../app/store.svelte';
 
-export const SAVED_KEY = 'wordlology.saved.v1';
+export const SAVED_KEY = 'wordlology:saved:v1';
 
 function isEntry(x: unknown): x is StrategyEntry {
   if (!x || typeof x !== 'object') return false;
@@ -39,7 +41,7 @@ export function loadSaved(storage: Pick<Storage, 'getItem'> | null = safeStorage
 
 export function storeSaved(entries: StrategyEntry[], storage: Pick<Storage, 'setItem'> | null = safeStorage()): void {
   try {
-    storage?.setItem(SAVED_KEY, JSON.stringify({ version: 1, entries }));
+    storage?.setItem(SAVED_KEY, JSON.stringify(entries.map((e) => ({ id: e.id, label: e.label, colour: e.colour, spec: e.spec }))));
   } catch {
     // Storage full or blocked: saved strategies stay for this session only.
   }

@@ -83,8 +83,14 @@ export function labelOf(spec: StrategySpec): string {
   return attempt(() => specLabel(spec), spec.kind.replace(/_/g, ' '));
 }
 
+/** A configuration from the result settings, as a plain object (safe to post to workers), or null. */
 export function configFor(strategy: StrategySpec, opener: string | null, kind: 'tree' | 'card', replicates?: number): Config | null {
-  return attempt<Config | null>(() => makeConfig({ strategy, opener, kind, replicates }), null);
+  return attempt<Config | null>(() => plain(makeConfig({ strategy: plain(strategy), opener, kind, replicates })), null);
+}
+
+/** A plain deep copy of a possibly proxied value. */
+export function plain<T>(v: T): T {
+  return v === undefined ? v : (JSON.parse(JSON.stringify(v)) as T);
 }
 
 /** Whether the loaded word list has frequencies (true while unknown, so nothing is disabled early). */
