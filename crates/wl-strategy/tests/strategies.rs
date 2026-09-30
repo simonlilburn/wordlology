@@ -361,10 +361,11 @@ fn switch_rules() {
     let ctx = Ctx::new(&list, &m, rules(false));
     let mut r = rng(4);
     let targets = sample_targets(&list, 60, &mut r);
-    let cases: [(&str, &dyn Fn(&State) -> bool); 3] = [
-        (r#"{"when":"candidates_le","n":12}"#, &|s: &State| s.candidates.len() <= 12),
-        (r#"{"when":"bits_le","h":4.5}"#, &|s: &State| wl_core::remaining_bits(s.candidates.len()) <= 4.5),
-        (r#"{"when":"after_turns","k":1}"#, &|s: &State| s.turn >= 1),
+    type Rule<'a> = (&'a str, fn(&State) -> bool);
+    let cases: [Rule; 3] = [
+        (r#"{"when":"candidates_le","n":12}"#, |s| s.candidates.len() <= 12),
+        (r#"{"when":"bits_le","h":4.5}"#, |s| wl_core::remaining_bits(s.candidates.len()) <= 4.5),
+        (r#"{"when":"after_turns","k":1}"#, |s| s.turn >= 1),
     ];
     for (rule, switched) in cases {
         let json = format!(r#"{{"kind":"switch","first":{{"kind":"random"}},"then":{{"kind":"max_info"}},"when":{rule}}}"#);
