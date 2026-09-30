@@ -1,0 +1,43 @@
+{
+  "id": "open-en-5",
+  "name": "Open English, five letters",
+  "version": "1.0.0",
+  "word_length": 5,
+  "language": "en",
+  "answers": "answers.txt",
+  "answers_ranked": "answers-ranked.txt",
+  "guesses": "guesses.txt",
+  "frequencies": "frequencies.tsv",
+  "notice": "NOTICE",
+  "licence": "guesses: ENABLE word list (public domain). answers and frequencies: derived from wordfreq (CC BY-SA 4.0), including data from SUBTLEX; see NOTICE.",
+  "credits": [
+    "ENABLE word list (public domain), compiled by Alan Beale and M. Cooper",
+    "wordfreq 3.1.1 by Robyn Speer, CC BY-SA 4.0",
+    "SUBTLEX word frequencies by Marc Brysbaert, Emmanuel Keuleers, Boris New and colleagues"
+  ],
+  "sources": {
+    "enable_url": "https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt",
+    "enable_sha256": "3f16130220645692ed49c7134e24a18504c2ca55b3c012f7290e3e77c63b1a89",
+    "wordfreq_version": "3.1.1"
+  },
+  "counts": {
+    "guesses": 8636,
+    "answers": 2500,
+    "answers_ranked": 3416,
+    "s_plurals_removed": 2455,
+    "blocklisted": 10,
+    "review_excluded": 2757,
+    "no_wordfreq_entry": 1594
+  },
+  "zipf_at_rank": {
+    "2000": 2.86,
+    "2500": 2.49
+  },
+  "sha256": {
+    "guesses.txt": "7e61927ebc2212faf51e8b050cf9d852dea3cfeb46d20a36fa3f46c9cd31e29d",
+    "answers.txt": "efadc8175b3c57718826e35839847e57af55d4468679291968ebd1db38842faa",
+    "answers-ranked.txt": "dd8cc5fe6eb6796304ab0bfcc273da08264f9717be50a4fb303beb08595717a3",
+    "frequencies.tsv": "bc6e114f5676026fe2daaeaac993a0f0d3a73b1d78cbdeff5a697cbbea4937a9",
+    "NOTICE": "847437b9784447159e0ce24d144f60d711d4aa7b1c133628548001f32dc989fa"
+  }
+}

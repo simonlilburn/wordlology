@@ -1,0 +1,31 @@
+[workspace]
+resolver = "2"
+members = ["crates/wl-core", "crates/wl-strategy", "crates/wl-engine", "crates/wl-wasm", "crates/wl-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/simonlilburn/wordlology"
+rust-version = "1.80"
+
+[workspace.dependencies]
+wl-core = { path = "crates/wl-core" }
+wl-strategy = { path = "crates/wl-strategy" }
+wl-engine = { path = "crates/wl-engine" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+blake3 = { version = "1", default-features = false }
+rand = { version = "0.8", default-features = false }
+rand_chacha = { version = "0.3", default-features = false }
+thiserror = "1"
+proptest = "1"
+criterion = { version = "0.5", default-features = false }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[profile.release.package.wl-wasm]
+opt-level = 3

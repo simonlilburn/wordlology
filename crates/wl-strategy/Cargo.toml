@@ -1,0 +1,17 @@
+[package]
+name = "wl-strategy"
+description = "The Strategy trait, the catalogue, combinators, the StrategySpec enum and parameter schemas"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+wl-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rand = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+rand_chacha = { workspace = true }
+proptest = { workspace = true }
