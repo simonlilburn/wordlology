@@ -273,7 +273,7 @@ export class CardFace {
     const g = this.ghostG;
     if (!g) return;
     if (!this.ghostImage) this.ghostImage = g.createImageData(GHOST_COLS, GHOST_ROWS_PX);
-    this.grid.toRgba(this.theme.ghost, this.theme.dark ? 0.4 : 0.34, this.ghostImage.data);
+    this.grid.toRgba(this.theme.ghost, this.theme.dark ? 0.42 : 0.38, this.ghostImage.data);
     g.putImageData(this.ghostImage, 0, 0);
     this.ghostTexture.needsUpdate = true;
     this.ghostUploaded = this.grid.version;

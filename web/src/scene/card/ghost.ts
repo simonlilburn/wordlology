@@ -151,12 +151,16 @@ export class DensityGrid {
     this.version++;
   }
 
-  /** Render to RGBA pixels: opacity grows with log density, so every path shows faintly. */
+  /**
+   * Render to RGBA pixels: opacity grows with the square root of density, so
+   * single paths stay faint while the main streams show where games flow.
+   */
   toRgba(rgb: [number, number, number], maxAlpha: number, out?: Uint8ClampedArray): Uint8ClampedArray {
     const n = this.data.length;
     const px = out && out.length === n * 4 ? out : new Uint8ClampedArray(n * 4);
-    const denom = Math.log1p(Math.max(1e-9, this.max));
+    const inv = 1 / Math.sqrt(Math.max(1e-9, this.max));
     const a255 = maxAlpha * 255;
+    const floor = Math.min(a255, 8);
     const [r, g, b] = rgb;
     for (let i = 0; i < n; i++) {
       const v = this.data[i];
@@ -164,7 +168,7 @@ export class DensityGrid {
       px[j] = r;
       px[j + 1] = g;
       px[j + 2] = b;
-      px[j + 3] = v > 0 ? Math.max(10, (Math.log1p(v) / denom) * a255) : 0;
+      px[j + 3] = v > 0 ? Math.max(floor, Math.sqrt(v) * inv * a255) : 0;
     }
     return px;
   }

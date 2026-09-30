@@ -38,7 +38,7 @@ describe('ghost path layout', () => {
 });
 
 describe('density grid', () => {
-  it('accumulates paths incrementally and renders log opacity', () => {
+  it('accumulates paths incrementally and renders faint opacity', () => {
     const g = new DensityGrid(20, 28, 7);
     const xs = [0.5, 0.3, 0.3];
     g.addPath(xs);
@@ -55,7 +55,7 @@ describe('density grid', () => {
       maxA = Math.max(maxA, px[i]);
       if (px[i] > 0) {
         lit++;
-        expect(px[i]).toBeGreaterThanOrEqual(10);
+        expect(px[i]).toBeGreaterThanOrEqual(8);
       }
     }
     expect(lit).toBeGreaterThan(10);

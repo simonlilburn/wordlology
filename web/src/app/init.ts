@@ -16,6 +16,7 @@ import { runs } from '../model/runs';
 import { resetFocus, syncFocus } from '../model/focus';
 import type { WordData } from '../model/types';
 import { DEFAULT_LIST_ID, loadWordData, selectionKey, answerIndexOf } from '../model/wordlists';
+import { openExport } from '../export/index';
 import { newGame, stepLevel, stepTarget, toast } from './actions';
 import { answerSelection } from './config';
 import { startEffects } from './effects.svelte';
@@ -194,9 +195,7 @@ async function start(): Promise<void> {
   installDefaultShortcuts({
     stepLevel,
     stepTarget,
-    openExport: () => {
-      void import('../export/index').then((m) => m.openExport());
-    },
+    openExport: () => openExport(),
   });
   startEffects({ reloadWords, resolveReducedMotion });
   if (typeof window !== 'undefined') window.addEventListener('hashchange', onHashChange);

@@ -313,6 +313,18 @@ impl Run {
         matches!(self.work, Work::Finished)
     }
 
+    /// Distribution cache (hits, misses, entries held) of a stochastic run
+    /// that is still going; `None` otherwise.
+    pub fn cache_stats(&self) -> Option<(u64, u64, usize)> {
+        match &self.work {
+            Work::Sampled { cache, .. } => {
+                let (h, m) = cache.stats();
+                Some((h, m, cache.len()))
+            }
+            _ => None,
+        }
+    }
+
     pub fn is_cancelled(&self) -> bool {
         self.cancelled
     }
