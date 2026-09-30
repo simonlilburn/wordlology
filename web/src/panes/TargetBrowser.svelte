@@ -426,6 +426,7 @@
   }
   select {
     min-height: 36px;
+    max-width: 11rem;
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--bg);
@@ -457,7 +458,10 @@
     border-radius: 8px;
   }
   .az span {
-    flex: 1;
+    /* Letters share the strip's width and never push past it (the counter keeps its place). */
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
     text-align: center;
   }
   .az span.on {
@@ -469,9 +473,21 @@
     flex: 1;
   }
   .count {
+    flex: none;
+    white-space: nowrap;
     font-size: 0.75rem;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
+  }
+  /* Narrow screens: a compact scrubber labelled at every other letter (the
+     current letter always shows); every letter keeps its place for dragging. */
+  @media (max-width: 520px) {
+    select {
+      max-width: 7.5rem;
+    }
+    .az span:nth-child(even):not(.on) {
+      color: transparent;
+    }
   }
   .stage-wrap {
     position: relative;

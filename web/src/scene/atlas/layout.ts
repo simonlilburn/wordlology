@@ -114,8 +114,13 @@ export function cardView(r: Rect, vp: Viewport, maxScale = 2.4): View {
 
 /** The layout region the Card view fits: the card plus a peek at its right and lower neighbours. */
 export function cardRegion(r: Rect, compact = false): Rect {
-  const pad = compact ? 12 : 20;
-  const peekX = Math.round(CARD_W * (compact ? 0.16 : 0.42)), peekY = Math.round(CARD_H * (compact ? 0.1 : 0.3));
+  if (compact) {
+    // Phones: the card as large as the viewport allows, with the "+ Strategy" card peeking at the right.
+    const pad = 12;
+    return { x: r.x - pad, y: r.y - pad, w: r.w + pad + GAP + Math.round(CARD_W * 0.16), h: r.h + 2 * pad };
+  }
+  const pad = 20;
+  const peekX = Math.round(CARD_W * 0.42), peekY = Math.round(CARD_H * 0.3);
   return { x: r.x - pad, y: r.y - pad, w: r.w + pad + GAP + peekX, h: r.h + pad + GAP + peekY };
 }
 

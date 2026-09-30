@@ -421,6 +421,46 @@ mod tests {
     }
 
     #[test]
+    fn partitions_match_naive() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/wordlists/ref-en-5");
+        let full = crate::load_dir(&dir).unwrap();
+        // Also a list whose answers fill whole bit words (128 answers).
+        let words: Vec<&str> = full.answers()[..128].iter().map(|&id| full.word(id)).collect();
+        let whole = WordList::from_words(Manifest::adhoc("w", 5), &words, &words).unwrap();
+        for l in [&full, &whole] {
+            let m = PatternMatrix::build(l);
+            let na = l.n_answers();
+            let sets = [
+                CandidateSet::full(na),
+                CandidateSet::from_iter(na, (0..na as AnswerIdx).filter(|a| a % 3 != 0)),
+                CandidateSet::from_iter(na, (0..na as AnswerIdx).filter(|a| a * 7 % 11 == 0)),
+                CandidateSet::from_iter(na, (0..na as AnswerIdx).filter(|a| a % 64 < 20 || a % 5 == 0)),
+                CandidateSet::from_iter(na, [0, 63, 64, na as AnswerIdx - 1]),
+                CandidateSet::empty(na),
+            ];
+            let mut counts = vec![0u32; m.n_patterns()];
+            for cands in &sets {
+                for g in (0..l.n_guesses() as WordId).step_by(37) {
+                    let mut naive = vec![0u32; m.n_patterns()];
+                    for a in cands.iter() {
+                        naive[m.get(g, a).0 as usize] += 1;
+                    }
+                    m.partition_counts(g, cands, &mut counts);
+                    assert_eq!(counts, naive);
+                    let info = crate::expected_info(&m, g, cands, &mut counts);
+                    assert_eq!(info.to_bits(), crate::entropy_from_counts(&naive, cands.len() as u32).to_bits());
+                    for p in [0, 1, 80, 121, 242, 243, 300] {
+                        let want = CandidateSet::from_iter(na, cands.iter().filter(|&a| m.get(g, a).0 == p));
+                        let got = m.refine(cands, g, Pattern(p));
+                        assert_eq!(got, want);
+                        assert_eq!(got.len(), want.len());
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn every_length_matches_feedback() {
         let lists: [&[&str]; 4] = [
             &["abba", "aaab", "baaa", "abcd", "dcba", "aaaa", "bbbb", "abab", "zzza", "azzz"],
