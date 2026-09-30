@@ -4,9 +4,11 @@
 // Game view needs lives here.
 
 import { app } from '../../app/store.svelte';
-import { finishGame, newGame, recordPlayerPath } from '../../app/actions';
+import { finishGame, newGame, recordPlayerPath, setLevel } from '../../app/actions';
 import { inGameView } from '../../app/keyboard';
 import { focusData } from '../../model/focus';
+import { answerIndexOf } from '../../model/wordlists';
+import type { WordData } from '../../model/types';
 import type { ScoresResult } from '../../backend/types';
 import {
   endMessage,
@@ -21,6 +23,7 @@ import {
 import {
   drawReplicate,
   endedAt,
+  hasPlayerMove,
   nextAction,
   phaseLabel,
   playAtCursor,
@@ -33,6 +36,8 @@ import {
 import { attempt, feedbackOrNull, getBackend, replayConfig } from './services';
 
 export const FLIP_STAGGER_MS = 180;
+/** Delay between the end-of-game message and the zoom out to the Tree (mirrors app/actions.ts). */
+export const ZOOM_OUT_DELAY_MS = 800;
 export const FLIP_MS = 450;
 export const SHAKE_MS = 600;
 
@@ -314,13 +319,37 @@ async function endGame(won: boolean, n: number, target: string, record: 'game' |
   const msg = endMessage(won, n, target);
   setMessage(msg);
   announce(msg);
-  if (record === 'game') attempt(() => finishGame(), undefined);
-  else if (record === 'branch') recordBranch(won ? 'won' : 'lost');
+  if (record === 'game') {
+    const finished = attempt(() => {
+      finishGame();
+      return true;
+    }, false);
+    // Without the platform's finishGame, still record the game and zoom out after 800 ms.
+    if (!finished) {
+      const board = app.game.board;
+      if (board) attempt(() => recordPlayerPath(board), undefined);
+      if (app.display.zoomOutAfterGame) {
+        setTimeout(() => {
+          if (token === endToken && !inReplay() && gameActive()) attempt(() => setLevel(1), undefined);
+        }, ZOOM_OUT_DELAY_MS);
+      }
+    }
+  } else if (record === 'branch') recordBranch(won ? 'won' : 'lost');
 }
 
-/** Record the current replay branch as a player path (once per branch state). */
-export function recordBranch(status: 'playing' | 'won' | 'lost' = 'playing'): void {
+/** Status of the replay path's end: won, lost, or still playing. */
+function pathStatus(): 'playing' | 'won' | 'lost' {
+  const n = app.replay.guesses.length;
+  return endedAt(currentPath(), n, solvedCode(wordLength()), maxGuesses()) ?? 'playing';
+}
+
+/**
+ * Record the current replay branch as a player path (once per branch state),
+ * if it holds a move of the player's own.
+ */
+export function recordBranch(status: 'playing' | 'won' | 'lost' = pathStatus()): void {
   if (!inReplay() || view.branchAt < 0 || app.replay.guesses.length === 0) return;
+  if (!hasPlayerMove(currentPath())) return;
   const key = pathKey();
   if (view.recordedKey === key) return;
   view.recordedKey = key;
@@ -357,6 +386,45 @@ export function ensureBoard(): void {
   if (!app.game.board) {
     app.game.board = { target: Math.floor(Math.random() * w.answers.length), guesses: [], patterns: [], status: 'playing' };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Word-list changes
+
+// A new answer selection renumbers answers (guess ids stay the same), so the
+// board and the replay keep their target by word.
+let seenWords: WordData | null = null;
+let seenBoard: unknown = null;
+let seenBoardWord: string | null = null;
+let seenReplayWord: string | null = null;
+
+/** Keep the board's and the replay's targets when the word list is rebuilt. */
+export function syncWords(): void {
+  const w = app.words;
+  const prev = seenWords;
+  if (w && prev && w !== prev) {
+    const sameGuesses =
+      prev.manifest.id === w.manifest.id && prev.guesses.length === w.guesses.length && prev.wordLength === w.wordLength;
+    const board = app.game.board;
+    if (board && board === seenBoard && seenBoardWord) {
+      const idx = sameGuesses ? attempt(() => answerIndexOf(w, seenBoardWord!), -1) : -1;
+      if (idx >= 0) {
+        if (board.target !== idx) board.target = idx;
+      } else {
+        startNewGame();
+        flash('The answer list changed, so a new game has started', 3000);
+      }
+    }
+    if (app.replay.active && seenReplayWord) {
+      const idx = sameGuesses ? attempt(() => answerIndexOf(w, seenReplayWord!), -1) : -1;
+      if (idx >= 0) app.replay.target = idx;
+      else app.replay.active = false;
+    }
+  }
+  seenWords = w;
+  seenBoard = app.game.board;
+  seenBoardWord = app.game.board ? answerWord(app.game.board.target) : null;
+  seenReplayWord = app.replay.active ? answerWord(app.replay.target) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -463,6 +531,8 @@ function replayPlay(word: string, id: number, meta: TurnMeta, knownPattern?: num
     return false;
   }
   const path = currentPath();
+  // Playing something else at an earlier turn cuts the path: keep a player branch that is being cut off.
+  if (path.cursor < path.guesses.length && path.guesses[path.cursor] !== id) recordBranch();
   if (meta.source !== 'strategy' && startsNewBranch(path, id)) view.branchSerial++;
   const next = playAtCursor(path, id, pattern, meta);
   resetTransient();
@@ -574,7 +644,7 @@ export async function loadHint(signal: AbortSignal): Promise<void> {
       view.hintState = 'unavailable';
       return;
     }
-    view.hint = { word: top.word, p: res.deterministic ? 1 : top.p, phase: res.phase, deterministic: res.deterministic, key };
+    view.hint = { word: top.word, p: res.deterministic ? 1 : top.p, phase: res.phase.replace(/_/g, ' '), deterministic: res.deterministic, key };
     view.hintState = 'idle';
   } catch {
     if (signal.aborted) return;
@@ -613,7 +683,7 @@ export async function fillTurnScores(signal: AbortSignal): Promise<void> {
         const covered = res.entries.reduce((s, e) => s + e.p, 0) > 0.999;
         p = entry ? entry.p : covered ? 0 : null;
       }
-      if (view.meta[i]) view.meta[i] = { ...view.meta[i], pChosen: p, phase: view.meta[i].phase ?? res.phase };
+      if (view.meta[i]) view.meta[i] = { ...view.meta[i], pChosen: p, phase: view.meta[i].phase ?? res.phase.replace(/_/g, ' ') };
     } catch {
       return;
     }

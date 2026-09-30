@@ -7,7 +7,7 @@
 // (−/= zoom, Esc, , and . targets, E export, ? help, ; settings) in
 // installKeyboard(); other areas register theirs with registerShortcut.
 
-import { app } from './store.svelte';
+import { app, type Level } from './store.svelte';
 
 export interface Shortcut {
   /** KeyboardEvent.key values, e.g. ['f', 'F'] or ['ArrowLeft']. */
@@ -73,6 +73,77 @@ export function dispatchKey(e: KeyboardEvent): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Register a platform default: defaults sit below every area's shortcuts
+ * whatever the registration order, so an area can always override one.
+ */
+function registerDefault(s: Shortcut): () => void {
+  shortcuts.unshift(s);
+  return () => {
+    const i = shortcuts.indexOf(s);
+    if (i >= 0) shortcuts.splice(i, 1);
+  };
+}
+
+/** Dialog flags Esc closes before it zooms out, topmost first. */
+const DIALOG_FLAGS = ['help', 'about', 'exportDialog', 'settings', 'search', 'openerPicker', 'compare', 'lab'] as const;
+
+/** Close the topmost open dialog; returns false when none was open. */
+export function closeTopDialog(): boolean {
+  for (const k of DIALOG_FLAGS) {
+    if (app.ui[k]) {
+      app.ui[k] = false;
+      return true;
+    }
+  }
+  return false;
+}
+
+export interface KeyboardActions {
+  stepLevel(delta: 1 | -1): void;
+  stepTarget(delta: 1 | -1): void;
+  openExport(): void;
+}
+
+let defaultsInstalled: (() => void) | null = null;
+
+/**
+ * Install the platform's default shortcuts (the spec's key table): − and =
+ * zoom one level out or in, Esc closes a dialog or zooms out, , and . flip
+ * targets, E exports, ? opens help and ; the settings (outside the Game
+ * view). Other areas register F, S, O, / and ← → themselves.
+ */
+export function installDefaultShortcuts(actions: KeyboardActions): () => void {
+  if (defaultsInstalled) return defaultsInstalled;
+  const notGame = () => !inGameView();
+  const offs = [
+    registerDefault({ keys: ['-', '_', '−'], description: 'Zoom out one level', handler: () => actions.stepLevel(1) }),
+    registerDefault({ keys: ['=', '+'], description: 'Zoom in one level', handler: () => actions.stepLevel(-1) }),
+    registerDefault({
+      keys: ['Escape'],
+      description: 'Close a dialog, or zoom out',
+      handler: () => {
+        if (!closeTopDialog()) actions.stepLevel(1);
+      },
+    }),
+    registerDefault({ keys: [','], description: 'Previous target', when: notGame, handler: () => actions.stepTarget(-1) }),
+    registerDefault({ keys: ['.'], description: 'Next target', when: notGame, handler: () => actions.stepTarget(1) }),
+    registerDefault({ keys: ['e', 'E'], description: 'Export', when: notGame, handler: () => actions.openExport() }),
+    registerDefault({ keys: ['?'], description: 'Shortcut help', handler: () => (app.ui.help = !app.ui.help) }),
+    registerDefault({ keys: [';'], description: 'Settings', when: notGame, handler: () => (app.ui.settings = true) }),
+  ];
+  defaultsInstalled = () => {
+    for (const off of offs) off();
+    defaultsInstalled = null;
+  };
+  return defaultsInstalled;
+}
+
+/** The level a key press should consider current (for tests and handlers). */
+export function keyboardLevel(): Level {
+  return Math.round(Math.min(3, Math.max(0, app.zTarget))) as Level;
 }
 
 /** Install the one global listener (idempotent). Returns an uninstall function. */

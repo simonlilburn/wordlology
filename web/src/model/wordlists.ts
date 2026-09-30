@@ -119,7 +119,7 @@ export function buildWordData(files: WordListFiles, selection: AnswerSelection =
 
   const sel: AnswerSelection =
     selection.kind === 'pasted' ? { kind: 'pasted', sha256: answersSha256(answerWords), words: answerWords } : selection;
-  return {
+  return new LoadedWordData({
     manifest: m,
     selection: sel,
     wordLength: len,
@@ -134,7 +134,28 @@ export function buildWordData(files: WordListFiles, selection: AnswerSelection =
       answers: selection.kind === 'default' ? files.answers : answerWords.join('\n') + '\n',
       frequencies: files.frequencies,
     },
-  };
+  });
+}
+
+/**
+ * Word data as a class instance: Svelte's $state does not proxy class
+ * instances, so assigning it to `app.words` keeps its large arrays plain
+ * (fast to read every frame) while `app.words` itself stays reactive.
+ */
+export class LoadedWordData implements WordData {
+  manifest!: WordData['manifest'];
+  selection!: WordData['selection'];
+  wordLength!: number;
+  guesses!: string[];
+  answers!: number[];
+  answerOf!: Int32Array;
+  index!: Map<string, number>;
+  zipf!: Float32Array | null;
+  ranked!: string[] | null;
+  texts!: WordData['texts'];
+  constructor(d: WordData) {
+    Object.assign(this, d);
+  }
 }
 
 const fileCache = new Map<string, Promise<WordListFiles>>();

@@ -8,6 +8,7 @@
 //   "kept in this browser" (localStorage), keyed by word list and answer
 //   selection; stored as words so indices can be rebuilt.
 
+import { loadSaved, storeSaved } from '../lab/saved';
 import { feedback as patternOf } from '../model/feedback';
 import { answersSha256, normaliseWords } from '../model/sha256';
 import type { WordData } from '../model/types';
@@ -23,7 +24,6 @@ import {
 } from './store.svelte';
 
 const K_DISPLAY = 'wordlology:display:v1';
-const K_SAVED = 'wordlology:saved:v1';
 const K_RECENT = 'wordlology:recent-openers:v1';
 const K_PLAYERS = 'wordlology:players:v1:';
 
@@ -106,7 +106,7 @@ export function sanitiseResult(r: ResultSettings): ResultSettings {
   const out = structuredClone(r);
   for (const [k, choices] of Object.entries(RESULT_CHOICES)) {
     const key = k as keyof ResultSettings;
-    if (!choices!.includes(out[key])) (out as Record<string, unknown>)[key] = DEFAULT_RESULT[key];
+    if (!choices!.includes(out[key])) (out as unknown as Record<string, unknown>)[key] = DEFAULT_RESULT[key];
   }
   out.maxGuesses = Math.min(10, Math.max(4, Math.round(out.maxGuesses)));
   out.replicatesTree = Math.min(1000, Math.max(1, Math.round(out.replicatesTree)));
@@ -136,14 +136,15 @@ export function saveDisplaySettings(d: DisplaySettings = app.display): void {
 /** Restore display settings, saved strategies and recent openers into the store. */
 export function restoreLocalSettings(): void {
   app.display = loadDisplaySettings();
-  const saved = readJson<StrategyEntry[]>(storage('local'), K_SAVED);
-  if (Array.isArray(saved)) app.saved = saved.filter((s) => s && typeof s.id === 'string' && s.spec && typeof s.spec.kind === 'string');
+  // Saved strategies use the Lab's storage (lab/saved.ts), so both agree on one key.
+  const saved = loadSaved();
+  if (saved.length && !app.saved.length) app.saved = saved;
   const recent = readJson<string[]>(storage('local'), K_RECENT);
   if (Array.isArray(recent)) app.focus.recentOpeners = recent.filter((w) => typeof w === 'string').slice(0, 8);
 }
 
 export function saveSavedStrategies(): void {
-  writeJson(storage('local'), K_SAVED, JSON.parse(JSON.stringify(app.saved)));
+  storeSaved(JSON.parse(JSON.stringify(app.saved)) as StrategyEntry[]);
 }
 
 export function saveRecentOpeners(): void {

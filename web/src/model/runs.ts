@@ -13,7 +13,7 @@ import type { Run, RunManager, RunStatus } from './types';
 
 const PRIORITY_RANK: Record<Priority, number> = { focused: 2, visible: 1, background: 0 };
 /** Completed runs kept in the manager's map (by games held); older ones are forgotten (the cache has them). */
-const KEEP_GAMES = 1_500_000;
+const KEEP_GAMES = 600_000;
 
 export interface RunManagerImpl extends RunManager {
   /** Every run the manager holds. */
@@ -24,6 +24,8 @@ export interface RunManagerImpl extends RunManager {
   reset(): void;
   /** Called with every run the manager creates. */
   onRun(cb: (run: Run) => void): () => void;
+  /** Forget a finished run so its games can be garbage-collected once nobody else holds it. */
+  release(run: Run): void;
 }
 
 class RunImpl implements Run {
@@ -109,6 +111,11 @@ class RunImpl implements Run {
     return this.status === 'done' || this.status === 'error' || this.status === 'cancelled';
   }
 
+  /** A method, so status checks after an await are not narrowed away by TypeScript. */
+  isCancelled(): boolean {
+    return this.status === 'cancelled';
+  }
+
   cancel(): void {
     if (this.isFinal()) return;
     this.status = 'cancelled';
@@ -161,7 +168,7 @@ class Manager implements RunManagerImpl {
       // A priority change before the stream existed.
       controlsOf(stream).setPriority?.(run.priority);
       for await (const ev of stream) {
-        if (run.status === 'cancelled') break;
+        if (run.isCancelled()) break;
         if (run.status === 'queued') run.status = run.paused ? 'paused' : 'running';
         if (ev.type === 'games') {
           for (const g of ev.games) run.games.push(g);
@@ -180,7 +187,7 @@ class Manager implements RunManagerImpl {
         }
         run.bump();
       }
-      if (run.status !== 'done' && run.status !== 'cancelled') {
+      if (run.status !== 'done' && !run.isCancelled()) {
         // The stream ended without a summary (aborted elsewhere).
         run.status = 'cancelled';
         this.forget(run);
@@ -242,6 +249,11 @@ class Manager implements RunManagerImpl {
   onRun(cb: (run: Run) => void): () => void {
     this.runListeners.add(cb);
     return () => this.runListeners.delete(cb);
+  }
+
+  release(run: Run): void {
+    const r = run as RunImpl;
+    if (r.isFinal?.()) this.forget(r);
   }
 }
 

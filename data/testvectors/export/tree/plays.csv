@@ -1,0 +1,11 @@
+game_id,config_id,turn,guess,feedback,feedback_code,candidates_before,candidates_after,bits_expected,bits_observed,p_chosen,is_candidate,phase,matches_filter
+132aa67b02fbfd82-began-0,132aa67b02fbfd82,1,slate,bbyby,90,300,9,5.65874,5.05889,1,FALSE,opener,NA
+132aa67b02fbfd82-began-0,132aa67b02fbfd82,2,media,bgbby,87,9,1,2.41938,3.16993,0.102596,TRUE,info_proportional,NA
+132aa67b02fbfd82-began-0,132aa67b02fbfd82,3,began,ggggg,242,1,1,0,0,1,TRUE,info_proportional,NA
+132aa67b02fbfd82-began-1,132aa67b02fbfd82,1,slate,bbyby,90,300,9,5.65874,5.05889,1,FALSE,opener,NA
+132aa67b02fbfd82-began-1,132aa67b02fbfd82,2,break,gbygb,65,9,1,2.41938,3.16993,0.102596,TRUE,info_proportional,NA
+132aa67b02fbfd82-began-1,132aa67b02fbfd82,3,began,ggggg,242,1,1,0,0,1,TRUE,info_proportional,NA
+132aa67b02fbfd82-began-p1,132aa67b02fbfd82,1,slate,bbyby,90,300,9,5.65874,5.05889,1,FALSE,opener,NA
+132aa67b02fbfd82-began-p1,132aa67b02fbfd82,2,crane,bbyyy,117,9,2,2.19716,2.16993,0,FALSE,player,NA
+132aa67b02fbfd82-began-p1,132aa67b02fbfd82,3,doubt,bbbyb,27,2,1,1,1,0,FALSE,player,NA
+132aa67b02fbfd82-began-p1,132aa67b02fbfd82,4,began,ggggg,242,1,1,0,0,1,TRUE,info_proportional,NA

@@ -3,6 +3,7 @@ import {
   clampCursor,
   drawReplicate,
   endedAt,
+  hasPlayerMove,
   nextAction,
   openPath,
   phaseLabel,
@@ -127,6 +128,27 @@ describe('nextAction', () => {
   });
 });
 
+describe('hasPlayerMove', () => {
+  it('is false for the opened path and for strategy draws past its end', () => {
+    expect(hasPlayerMove(solvedPath())).toBe(false);
+    const open = openPath([10, 20], [5, 17]);
+    const drawn = playAtCursor(open, 30, 80, strat);
+    expect(drawn.branchAt).toBe(2);
+    expect(hasPlayerMove(drawn)).toBe(false);
+  });
+  it('is true once the player types a guess or taps the hint', () => {
+    const typed = playAtCursor(scrubTo(solvedPath(), 1), 55, 4, player);
+    expect(hasPlayerMove(typed)).toBe(true);
+    const hinted = playAtCursor(openPath([10], [5]), 20, 17, { source: 'hint', pChosen: 0.4, phase: null });
+    expect(hasPlayerMove(hinted)).toBe(true);
+  });
+  it('ignores player moves before the branch point', () => {
+    const p = playAtCursor(scrubTo(openPath([10, 20], [5, 17], 2, [player, player]), 2), 30, 80, strat);
+    expect(p.branchAt).toBe(2);
+    expect(hasPlayerMove(p)).toBe(false);
+  });
+});
+
 describe('drawReplicate', () => {
   it('lies beyond R and differs per branch', () => {
     expect(drawReplicate(200, 0)).toBe(200);
@@ -143,5 +165,6 @@ describe('phaseLabel', () => {
     expect(phaseLabel(1, ['coverage', 'max info'])).toBe('max info');
     expect(phaseLabel(4, ['coverage'])).toBe('phase 4');
     expect(phaseLabel(0, undefined)).toBeNull();
+    expect(phaseLabel(0, ['info_proportional'])).toBe('info proportional');
   });
 });

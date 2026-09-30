@@ -1,0 +1,98 @@
+{
+  "config": {
+    "base_seed": 1,
+    "opener": "slate",
+    "replicates": 1,
+    "rules": {
+      "hard_mode": false,
+      "max_guesses": 6
+    },
+    "strategy": {
+      "kind": "max_info",
+      "pool": "candidates"
+    },
+    "weighting": "equal",
+    "word_list": {
+      "answers": {
+        "kind": "default"
+      },
+      "id": "ref-en-5",
+      "version": "1.0.0"
+    }
+  },
+  "config_id": "af49e7502a35bc9e",
+  "counts": [
+    0,
+    77,
+    202,
+    19,
+    2,
+    0,
+    0
+  ],
+  "first_games": [
+    {
+      "path": "slate>round",
+      "replicate": 0,
+      "solved": true,
+      "target": "round"
+    },
+    {
+      "path": "slate>cross",
+      "replicate": 0,
+      "solved": true,
+      "target": "cross"
+    },
+    {
+      "path": "slate>shown",
+      "replicate": 0,
+      "solved": true,
+      "target": "shown"
+    },
+    {
+      "path": "slate>could",
+      "replicate": 0,
+      "solved": true,
+      "target": "could"
+    },
+    {
+      "path": "slate>solid",
+      "replicate": 0,
+      "solved": true,
+      "target": "solid"
+    },
+    {
+      "path": "slate>block",
+      "replicate": 0,
+      "solved": true,
+      "target": "block"
+    },
+    {
+      "path": "slate>among",
+      "replicate": 0,
+      "solved": true,
+      "target": "among"
+    },
+    {
+      "path": "slate>basic",
+      "replicate": 0,
+      "solved": true,
+      "target": "basic"
+    }
+  ],
+  "games_blake3": "1b1490ca02462e7c4292c3258cb0da59dec1ce69fd3204a5b70473b0322c8c2e",
+  "mean_guesses": "2.82",
+  "n_games": 300,
+  "preset": "max_info",
+  "se_mean": null,
+  "shares": [
+    "0",
+    "0.256667",
+    "0.673333",
+    "0.0633333",
+    "0.00666667",
+    "0",
+    "0"
+  ],
+  "solver_version": "0.1.0"
+}

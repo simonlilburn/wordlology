@@ -1,6 +1,6 @@
 use wl_core::{math, WordId};
 
-use crate::info::InfoScorer;
+use crate::info::score_words;
 use crate::schema::{ParamField, ParamSchema, ParamType};
 use crate::spec::Pool;
 use crate::{rank_scores, Ctx, Dist, Resources, State, StateKey, Strategy};
@@ -18,9 +18,8 @@ impl InfoProportional {
     }
 
     fn infos(&self, ctx: &Ctx, state: &State) -> (Vec<WordId>, Vec<f64>) {
-        let mut scorer = InfoScorer::new(ctx.matrix, &state.candidates);
         let words = ctx.pool_words(state, self.pool);
-        let infos = words.iter().map(|&w| scorer.score(ctx.matrix, w)).collect();
+        let infos = score_words(ctx, state, &words);
         (words, infos)
     }
 }

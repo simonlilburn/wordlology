@@ -1,0 +1,98 @@
+{
+  "config": {
+    "base_seed": 1,
+    "opener": "slate",
+    "replicates": 5,
+    "rules": {
+      "hard_mode": false,
+      "max_guesses": 6
+    },
+    "strategy": {
+      "kind": "random",
+      "pool": "candidates"
+    },
+    "weighting": "equal",
+    "word_list": {
+      "answers": {
+        "kind": "default"
+      },
+      "id": "ref-en-5",
+      "version": "1.0.0"
+    }
+  },
+  "config_id": "7514aa2c09861c4d",
+  "counts": [
+    0,
+    384,
+    818,
+    277,
+    19,
+    2,
+    0
+  ],
+  "first_games": [
+    {
+      "path": "slate>focus",
+      "replicate": 0,
+      "solved": true,
+      "target": "focus"
+    },
+    {
+      "path": "slate>tired>other>enter",
+      "replicate": 0,
+      "solved": true,
+      "target": "enter"
+    },
+    {
+      "path": "slate>brand>crazy",
+      "replicate": 0,
+      "solved": true,
+      "target": "crazy"
+    },
+    {
+      "path": "slate>local>daily>apply",
+      "replicate": 0,
+      "solved": true,
+      "target": "apply"
+    },
+    {
+      "path": "slate>spend>seven",
+      "replicate": 0,
+      "solved": true,
+      "target": "seven"
+    },
+    {
+      "path": "slate>guide>crime>prime",
+      "replicate": 0,
+      "solved": true,
+      "target": "prime"
+    },
+    {
+      "path": "slate>sound",
+      "replicate": 0,
+      "solved": true,
+      "target": "sound"
+    },
+    {
+      "path": "slate>youth>north>worth",
+      "replicate": 0,
+      "solved": true,
+      "target": "worth"
+    }
+  ],
+  "games_blake3": "7eee6ff7fcc24aea47aaca3aa017f879d73c295f4776a0af8e175464b9131a2c",
+  "mean_guesses": "2.958",
+  "n_games": 1500,
+  "preset": "random",
+  "se_mean": "0.0139284",
+  "shares": [
+    "0",
+    "0.256",
+    "0.545333",
+    "0.184667",
+    "0.0126667",
+    "0.00133333",
+    "0"
+  ],
+  "solver_version": "0.1.0"
+}

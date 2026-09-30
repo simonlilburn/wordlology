@@ -49,13 +49,20 @@ function post(msg: FromWorker, transfer: Transferable[] = []): void {
   scope.postMessage(msg, transfer);
 }
 
+// A glob import resolves to nothing while the package has not been built
+// (`npm run wasm`), so the app still builds and reports a clear error.
+const wasmModules = import.meta.glob('../wasm/pkg/wl_wasm.js');
+
 function loadWasm(): Promise<WasmModule> {
   if (!wasmPromise) {
     wasmPromise = (async () => {
-      const mod = await import('../wasm/pkg/wl_wasm.js');
+      const load = wasmModules['../wasm/pkg/wl_wasm.js'];
+      if (!load) throw new Error('the solver has not been built (run `npm run wasm` in web/)');
+      const mod = (await load()) as WasmModule;
       await mod.default();
       return mod;
     })();
+    wasmPromise.catch(() => (wasmPromise = null));
   }
   return wasmPromise;
 }

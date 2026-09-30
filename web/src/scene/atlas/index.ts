@@ -1,6 +1,2 @@
-// Atlas layer: owned by the card/atlas agent.
-import type { SceneLayer } from '../types';
-
-export function createAtlasLayer(): SceneLayer {
-  return { name: 'atlas', update: () => false, dispose() {} };
-}
+// Atlas layer: owned by the card/atlas agent. The scene registers createAtlasLayer().
+export { createAtlasLayer } from './layer';

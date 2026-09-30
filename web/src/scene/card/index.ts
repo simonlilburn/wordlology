@@ -1,6 +1,2 @@
-// Card layer: owned by the card/atlas agent.
-import type { SceneLayer } from '../types';
-
-export function createCardLayer(): SceneLayer {
-  return { name: 'card', update: () => false, dispose() {} };
-}
+// Card layer: owned by the card/atlas agent. The scene registers createCardLayer().
+export { createCardLayer } from './layer';

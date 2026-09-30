@@ -17,6 +17,7 @@ use wl_core::{PatternMatrix, WordId, WordList, WordListError};
 use wl_strategy::spec::BuildError;
 use wl_strategy::Strategy;
 
+pub mod api;
 pub mod batch;
 pub mod cache;
 pub mod card;
@@ -27,6 +28,7 @@ pub mod run;
 pub mod seed;
 pub mod trie;
 
+pub use api::{ScoreEntry, ScoresResult};
 pub use card::{Card, CardAccumulator, PairRow};
 pub use config::{config_id, AnswerSelection, Config, Weighting, WordListRef};
 pub use game::{Game, Turn, PHASE_OPENER, PHASE_PLAYER};

@@ -2,7 +2,7 @@ use wl_core::WordId;
 
 use crate::schema::{ParamField, ParamSchema, ParamType};
 use crate::spec::StrategySpec;
-use crate::{rank_scores, catalogue, Ctx, Dist, Resources, State, StateKey, Strategy};
+use crate::{catalogue, rank_scores, Ctx, Dist, Resources, State, StateKey, Strategy};
 
 /// Modifier: once at most `n` candidates remain, guess one of them instead
 /// of asking the inner strategy.
@@ -55,9 +55,13 @@ impl Strategy for SolveWhenLe {
         }
     }
 
+    /// While solving, the choice depends on C alone, but the inner key is
+    /// mixed in too: [`Strategy::exhausted`] passes through to the inner
+    /// strategy and must stay a function of this key (a `sequence_exhausted`
+    /// switch around this modifier asks it).
     fn state_key(&self, state: &State) -> StateKey {
         if self.solving(state) {
-            StateKey::candidates(state).mix(5)
+            StateKey::candidates(state).combine(self.inner.state_key(state)).mix(5)
         } else {
             self.inner.state_key(state).mix(6)
         }

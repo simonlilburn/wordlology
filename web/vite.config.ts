@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 
@@ -7,8 +8,14 @@ const isolation = {
   'Cross-Origin-Embedder-Policy': 'require-corp',
 };
 
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
+
 export default defineConfig({
   plugins: [svelte()],
+  define: {
+    // Recorded as app_version in configs.csv.
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify(pkg.version),
+  },
   server: { headers: isolation },
   preview: { headers: isolation },
   worker: { format: 'es' },

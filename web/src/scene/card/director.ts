@@ -7,6 +7,7 @@
 
 import { app } from '../../app/store.svelte';
 import { treeBounds } from '../tree/bounds';
+import { DEFAULT_LAYOUT } from '../tree/layout';
 import type { FrameInfo, SceneContext } from '../types';
 import { atlasNeedsSeed, focusCellIndex, gridAxes, seedAtlas } from '../atlas/cells';
 import {
@@ -25,10 +26,11 @@ import {
 } from '../atlas/layout';
 import { publish, sceneView } from '../atlas/view.svelte';
 import { atlasFrame, fadeToward, STACK_PLANES, stackFrame, type AtlasFrame, type StackFrame } from './choreo';
+import { FACE } from './draw';
 import { springStep } from './spring';
 
 /** Screen margins kept free for the DOM headers in the Atlas view. */
-export const ATLAS_MARGINS: Margins = { left: 150, right: 28, top: 96, bottom: 28 };
+export const ATLAS_MARGINS: Margins = { left: 156, right: 28, top: 84, bottom: 64 };
 export const PLANE_SPACING = 22;
 const PERSP_FOV = 35;
 
@@ -63,8 +65,13 @@ class Director {
   /** Reduced-motion cross-fades (0..1) for the card and the atlas. */
   rmCard = 0;
   rmAtlas = 0;
-  /** Layout → world: wx = x + offset.x, wy = offset.y − y·yUp. */
+  /** Layout → world: wx = offset.x + x·k, wy = offset.y − y·k·yUp. */
   offset = { x: 0, y: 0 };
+  /**
+   * World units per layout unit, chosen so the card's rows line up with the
+   * tree's row bands (the tree layer draws band k from y = −(k − 1)·bandHeight).
+   */
+  k = 1;
   /** Extra zoom-out beyond the atlas fit (cards shrink to chips). */
   extra = 1;
   animating = false;
@@ -121,6 +128,7 @@ class Director {
     const { columns, rows } = gridAxes();
     this.layout = gridLayout(columns.length, rows.length);
     this.grid = columns.length * rows.length >= 2;
+    this.k = rowsScale(app.result.maxGuesses);
     this.focusIdx = focusCellIndex() ?? (app.focus.strategy ? [0, 0] : null);
     this.focusRect = this.focusIdx ? cellRect(this.layout, this.focusIdx[0], this.focusIdx[1]) : null;
     const fadeActive = this.reduced ? this.rmCard > 0 : z > 1.001;
@@ -191,11 +199,11 @@ class Director {
   }
 
   layoutToWorld(x: number, y: number): { x: number; y: number } {
-    return { x: x + this.offset.x, y: this.offset.y - y * this.yUp };
+    return { x: this.offset.x + x * this.k, y: this.offset.y - y * this.k * this.yUp };
   }
 
   worldToLayout(x: number, y: number): { x: number; y: number } {
-    return { x: x - this.offset.x, y: (this.offset.y - y) * this.yUp };
+    return { x: (x - this.offset.x) / this.k, y: ((this.offset.y - y) * this.yUp) / this.k };
   }
 
   screenToLayout(sx: number, sy: number): { x: number; y: number } {
@@ -228,33 +236,45 @@ class Director {
     const t = this.treeCam;
     if (!t) return null;
     const l = this.worldToLayout(t.wx, t.wy);
-    return { cx: l.x, cy: l.y, scale: t.scale };
+    return { cx: l.x, cy: l.y, scale: t.scale * this.k };
   }
 
-  /** World centre of the focused tree (tree layer), or the tree camera's centre, or the origin. */
-  private treeCentre(): { x: number; y: number } {
+  /**
+   * Where the focused card goes in world space: its centre on the tree's trunk
+   * (x = 0 in the tree layout, or the centre of treeBounds() when the tree is
+   * drawn elsewhere) and its first row on the tree's first guess band (y = 0).
+   */
+  private treeAnchor(): { x: number; top: number | null; cy: number } {
     let b: ReturnType<typeof treeBounds> = null;
     try {
       b = treeBounds();
     } catch {
       b = null;
     }
-    if (b && Number.isFinite(b.x) && Number.isFinite(b.y) && b.width > 0 && b.height > 0) {
-      return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    if (b && [b.x, b.y, b.width, b.height].every(Number.isFinite) && b.width > 0 && b.height > 0) {
+      const containsX = b.x <= 0 && b.x + b.width >= 0;
+      const containsY = b.y <= 0 && b.y + b.height >= 0;
+      if (containsX && containsY) return { x: 0, top: 0, cy: 0 };
+      return { x: b.x + b.width / 2, top: null, cy: b.y + b.height / 2 };
     }
-    if (this.treeCam) return { x: this.treeCam.wx, y: this.treeCam.wy };
-    return { x: 0, y: 0 };
+    return { x: 0, top: 0, cy: 0 };
   }
 
   /** Place the grid so the focused cell sits on the focused tree (only while the neighbours are hidden). */
   private updateOffset(z: number): void {
     const fr = this.focusRect;
     if (!fr) return;
-    const key = `${this.focusIdx?.join(',')}|${this.layout.cols}x${this.layout.rows}`;
+    const key = `${this.focusIdx?.join(',')}|${this.layout.cols}x${this.layout.rows}|${this.k}`;
     const neighboursHidden = z < 1.95 || (this.reduced && this.rmCard === 0);
     if (!this.offsetInit || z <= 1.02 || (key !== this.offsetKey && neighboursHidden)) {
-      const T = this.treeCentre();
-      this.offset = { x: T.x - (fr.x + fr.w / 2), y: T.y + (fr.y + fr.h / 2) * this.yUp };
+      const T = this.treeAnchor();
+      const k = this.k;
+      const x = T.x - (fr.x + fr.w / 2) * k;
+      const y =
+        T.top !== null
+          ? T.top + (fr.y + FACE.rowsTop) * k * this.yUp
+          : T.cy + (fr.y + fr.h / 2) * k * this.yUp;
+      this.offset = { x, y };
       this.offsetKey = key;
       this.offsetInit = true;
     }
@@ -265,10 +285,12 @@ class Director {
     const W = this.width, H = this.height;
     const vx = this.vp.left + this.vp.width / 2, vy = this.vp.top + this.vp.height / 2;
     const s = this.stack;
+    /** CSS px per world unit. */
+    const ws = v.scale / this.k;
     if (s && s.persp) {
       const p = ctx.persp;
       const fovRad = (PERSP_FOV * Math.PI) / 180;
-      const D = H / (v.scale * 2 * Math.tan(fovRad / 2));
+      const D = H / (ws * 2 * Math.tan(fovRad / 2));
       // The layout point at the canvas centre (the perspective camera looks at the canvas centre).
       const lx = v.cx + (W / 2 - vx) / v.scale, ly = v.cy + (H / 2 - vy) / v.scale;
       const T = this.layoutToWorld(lx, ly);
@@ -294,7 +316,7 @@ class Director {
     const o = ctx.ortho;
     const span = o.right - o.left;
     if (span === 0) return;
-    const zoom = (v.scale * Math.abs(span)) / W;
+    const zoom = (ws * Math.abs(span)) / W;
     const c = this.layoutToWorld(v.cx, v.cy);
     const cxF = (o.left + o.right) / 2, cyF = (o.top + o.bottom) / 2;
     const dx = (o.right - o.left) / (2 * zoom), dy = (o.top - o.bottom) / (2 * zoom);
@@ -310,6 +332,8 @@ class Director {
   private publishView(visible: boolean): void {
     publish('visible', visible);
     publish('z', Math.round(this.z * 1000) / 1000);
+    const vp = this.vp;
+    publish('vp', { left: Math.round(vp.left), top: Math.round(vp.top), width: Math.round(vp.width), height: Math.round(vp.height) });
     if (!visible) {
       publish('cardAlpha', 0);
       publish('headerAlpha', 0);
@@ -325,12 +349,19 @@ class Director {
     publish('grid', this.grid);
     publish('focus', this.focusIdx);
     publish('cardAlpha', this.cardAlpha);
-    publish('headerAlpha', this.grid || this.z > 2.2 ? this.atlas.headerAlpha : 0);
+    publish('headerAlpha', this.reduced ? this.rmAtlas : this.atlas.headerAlpha);
     publish('dashedAlpha', this.atlas.dashedAlpha);
     const settled = [2, 3].some((l) => Math.abs(this.z - l) < 0.01);
     publish('transitioning', !settled);
     void sceneView;
   }
+}
+
+/** World units per layout unit that make the card's rows as tall as the tree's bands. */
+export function rowsScale(maxGuesses: number): number {
+  const band = DEFAULT_LAYOUT?.bandHeight ?? 72;
+  const rows = Math.max(1, maxGuesses) + 1;
+  return (rows * band) / (FACE.rowsBottom - FACE.rowsTop);
 }
 
 export const director = new Director();

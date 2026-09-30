@@ -23,6 +23,7 @@
     startNewGame,
     step,
     syncReplay,
+    syncWords,
     view,
   } from './state.svelte';
   import Board from './Board.svelte';
@@ -48,6 +49,16 @@
     return () => clearTimeout(t);
   });
 
+  // A rebuilt word list (new answer selection) keeps the board's target by word.
+  $effect(() => {
+    void app.words;
+    void app.game.board;
+    void app.game.board?.target;
+    void app.replay.active;
+    void app.replay.target;
+    untrack(() => syncWords());
+  });
+
   // New replay path opened from a higher level.
   $effect(() => {
     void app.replay.active;
@@ -61,7 +72,7 @@
   $effect(() => {
     const a = active;
     untrack(() => {
-      if (wasActive && !a) recordBranch('playing');
+      if (wasActive && !a) recordBranch();
       wasActive = a;
     });
   });
@@ -111,8 +122,9 @@
     if (!gameActive() || anyDialogOpen() || isEditable(e.target)) return;
     const key = keyFromEvent(e.key);
     if (!key) return;
-    // Enter on a focused control activates that control instead.
-    if (key.kind === 'enter' && e.target instanceof HTMLElement && e.target.closest('button, a, [role="slider"]')) return;
+    // Enter on a button the user tabbed to activates it (buttons here never take
+    // focus from a mouse click, so after a click Enter still plays the row).
+    if (key.kind === 'enter' && e.target instanceof HTMLElement && e.target.closest('button, a[href], summary')) return;
     e.preventDefault();
     if (e.repeat && key.kind === 'enter') return;
     press(key);
@@ -154,12 +166,18 @@
         attempt(() => endZoomGesture(), undefined);
       }
     };
+    // Buttons keep focus off themselves on a mouse click, so Enter keeps playing the board.
+    const onmousedown = (e: MouseEvent) => {
+      if (e.target instanceof Element && e.target.closest('button')) e.preventDefault();
+    };
+    el.addEventListener('mousedown', onmousedown);
     el.addEventListener('wheel', onwheel, { passive: false });
     el.addEventListener('touchstart', ontouchstart, { passive: true });
     el.addEventListener('touchmove', ontouchmove, { passive: false });
     el.addEventListener('touchend', ontouchend);
     el.addEventListener('touchcancel', ontouchend);
     return () => {
+      el.removeEventListener('mousedown', onmousedown);
       el.removeEventListener('wheel', onwheel);
       el.removeEventListener('touchstart', ontouchstart);
       el.removeEventListener('touchmove', ontouchmove);
@@ -184,8 +202,10 @@
   aria-label="Game"
 >
   <header class="top">
-    <h1 class="wordmark" aria-label="wordlology">
-      <span class="w1">word</span><span class="w2">lology</span>
+    <h1 class="wordmark">
+      <button type="button" class="wordmark-btn" onclick={() => (app.ui.about = true)} title="About wordlology">
+        <span class="w1">word</span><span class="w2">lology</span><span class="visually-hidden">, about</span>
+      </button>
     </h1>
     <nav class="tools" aria-label="Game">
       <button type="button" class="tool text" onclick={startNewGame} title="Start a game with a new random word">
@@ -312,6 +332,22 @@
     font-weight: 800;
     letter-spacing: -0.02em;
     white-space: nowrap;
+  }
+  .wordmark-btn {
+    min-height: 44px;
+    padding: 0 4px;
+    margin-left: -4px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+  }
+  .wordmark-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
   }
   .w2 {
     color: var(--correct);

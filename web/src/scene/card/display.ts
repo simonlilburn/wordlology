@@ -78,14 +78,15 @@ export function displayFromSnapshot(s: CardSnapshot, replicates: number): CardDi
   };
   const shares = Array.from({ length: n }, (_, i) => clamp01(fin(s.shares[i])));
   if (s.deterministic && !s.complete) {
-    // Rows fill top-down: show each row's share of *all* targets so settled
-    // rows already have their final size; the rest sits in the hatched band.
+    // Rows fill top-down: the snapshot's shares are already fractions of
+    // *all* targets (not renormalised), so settled rows have their final size
+    // at once; the rest sits in the hatched band.
     const total = Math.max(1, s.nTargets);
     const unresolved = s.unresolved ?? Math.max(0, s.nTargets - s.nTargetsDone);
     const uf = clamp01(unresolved / total);
     d.unresolved = unresolved;
     d.unresolvedFrac = uf;
-    d.shares = shares.map((x) => x * (1 - uf));
+    d.shares = shares;
     d.lo = d.shares.slice();
     d.hi = d.shares.slice();
     d.counts = Array.from({ length: n }, (_, i) => fin(s.counts[i]));

@@ -171,7 +171,7 @@ export class StackPlanes {
       const dx = (1 - slide) * r.w * 0.5;
       const c = director.layoutToWorld(r.x + r.w / 2 + dx, r.y + r.h / 2);
       p.mesh.position.set(c.x, c.y, depth);
-      p.mesh.scale.set(r.w, r.h * director.yUp, 1);
+      p.mesh.scale.set(r.w * director.k, r.h * director.k * director.yUp, 1);
       p.mat.opacity = s.planesAlpha * slide * (0.35 + 0.45 * (1 - i / Math.max(1, count)));
       p.mesh.visible = p.mat.opacity > 0.003;
     }

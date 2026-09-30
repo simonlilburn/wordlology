@@ -11,7 +11,7 @@ use wl_core::{observed_info, AnswerIdx, Pattern, WordList, SOLVER_VERSION};
 use wl_strategy::StrategySpec;
 
 use crate::card::{pair_rows, CardAccumulator, RankMetric};
-use crate::config::{strategy_canonical_json, Config};
+use crate::config::{strategy_canonical_json, AnswerSelection, Config, Weighting};
 use crate::game::Game;
 use crate::trie::TargetTrie;
 use crate::{phase_label, Prepared};
@@ -217,6 +217,24 @@ fn touches_match(list: &WordList, g: &Game, filter: &dyn RowFilter) -> bool {
     g.turns.iter().enumerate().any(|(i, t)| filter.matches(list.word(t.guess), i + 1, g.solved && i + 1 == n))
 }
 
+/// The answer selection as recorded in configs.csv: `default`, `top:N` or `pasted:{sha256}`.
+pub fn answers_label(sel: &AnswerSelection) -> String {
+    match sel {
+        AnswerSelection::Default => "default".into(),
+        AnswerSelection::Top { n } => format!("top:{n}"),
+        AnswerSelection::Pasted { sha256, .. } => format!("pasted:{sha256}"),
+    }
+}
+
+fn weighting_label(w: Weighting) -> &'static str {
+    match w {
+        Weighting::Equal => "equal",
+        Weighting::Frequency => "frequency",
+    }
+}
+
+/// configs.csv: the spec's columns, then `complete` and `targets_finished`
+/// (partial exports), then the other result settings, `answers` and `weighting`.
 pub fn configs_csv(configs: &[ExportConfig], opts: &ExportOptions) -> String {
     let mut t = Table::new(&[
         "config_id",
@@ -236,6 +254,8 @@ pub fn configs_csv(configs: &[ExportConfig], opts: &ExportOptions) -> String {
         "exported_at",
         "complete",
         "targets_finished",
+        "answers",
+        "weighting",
     ]);
     for c in configs {
         let cfg = &c.config;
@@ -257,6 +277,8 @@ pub fn configs_csv(configs: &[ExportConfig], opts: &ExportOptions) -> String {
             opts.exported_at.clone(),
             fmt_bool(c.complete).into(),
             c.targets_finished.to_string(),
+            answers_label(&cfg.word_list.answers),
+            weighting_label(cfg.weighting).into(),
         ]);
     }
     t.finish()

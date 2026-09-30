@@ -5,7 +5,7 @@
   import { fmtProb } from './candidates';
   import { endedAt } from './replay';
   import { solvedCode } from './logic';
-  import { replayConfig, strategyLabel } from './services';
+  import { replayConfig, strategyLabel, toggleAnnotations } from './services';
   import { currentPath, maxGuesses, next, pathKey, playHint, scrub, view, wordLength, wordOf } from './state.svelte';
 
   const n = $derived(app.replay.guesses.length);
@@ -110,8 +110,9 @@
     <button
       type="button"
       class="toggle"
+      aria-label="Annotations"
       aria-pressed={app.display.replayAnnotations}
-      onclick={() => (app.display.replayAnnotations = !app.display.replayAnnotations)}
+      onclick={toggleAnnotations}
       title="Show candidates, bits, probability and phase beside each row"
     >
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"
@@ -302,9 +303,24 @@
     color: var(--muted);
     font-variant-numeric: tabular-nums;
   }
-  @media (max-width: 380px) {
+  .chip {
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+  .chip-w {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  @media (max-width: 460px) {
+    .chip-k,
     .toggle span {
       display: none;
+    }
+    .toggle {
+      padding: 0 12px;
+    }
+    .actions {
+      gap: 6px;
     }
   }
 </style>

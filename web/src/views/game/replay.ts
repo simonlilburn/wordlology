@@ -77,6 +77,16 @@ export function playAtCursor(path: ReplayPath, guess: number, pattern: number, m
   };
 }
 
+/**
+ * Whether the path holds a move of the player's own (typed, or the hint chip
+ * tapped) from its branch point on. Strategy draws past the end of an opened
+ * path are the strategy's games, not a player path.
+ */
+export function hasPlayerMove(path: Pick<ReplayPath, 'meta' | 'branchAt'>): boolean {
+  if (path.branchAt < 0) return false;
+  return path.meta.slice(path.branchAt).some((m) => m.source === 'player' || m.source === 'hint');
+}
+
 /** Whether playing a guess at the cursor starts a new branch (rather than continuing the current one). */
 export function startsNewBranch(path: ReplayPath, guess: number): boolean {
   const c = path.cursor;
@@ -114,6 +124,6 @@ export function phaseLabel(phase: number, labels: string[] | null | undefined): 
   if (phase === 255) return 'opener';
   if (phase === 254) return 'player';
   const l = labels?.[phase];
-  if (l) return l;
+  if (l) return l.replace(/_/g, ' ');
   return labels && labels.length ? `phase ${phase}` : null;
 }

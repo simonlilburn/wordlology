@@ -292,7 +292,11 @@ export function layoutTree(input: LayoutInput): Layout {
   const rootV = decide(input.root, Math.max(p.width, minW), true, 'root');
   if (rootV.mass <= 0) rootV.mass = total;
 
-  // Pass 2: needs, bottom up. Trunk nodes need room on each side separately.
+  // Pass 2: needs, bottom up: at least λ px per game (so slots are
+  // proportional to subtree games) and at least the label width. Trunk nodes
+  // need room on each side separately, so the tree may extend further on one
+  // side of the trunk than the other.
+  const lambda = p.width / total;
   const trunkChild = (v: VNode): VNode | null => {
     for (const c of v.children) if (c.trunk) return c;
     return null;
@@ -303,7 +307,7 @@ export function layoutTree(input: LayoutInput): Layout {
     if (!v.trunk) {
       let sum = 0;
       for (const c of v.children) sum += c.need;
-      v.need = Math.max(own, sum);
+      v.need = Math.max(own, sum, lambda * v.mass);
       v.needL = v.needR = v.need / 2;
       return;
     }
@@ -389,8 +393,7 @@ export function layoutTree(input: LayoutInput): Layout {
       x += widths[i];
     });
   };
-  const halfW = Math.max(p.width, minW) / 2;
-  place(rootV, -Math.max(rootV.needL, halfW), Math.max(rootV.needR, halfW));
+  place(rootV, -Math.max(rootV.needL, minW / 2), Math.max(rootV.needR, minW / 2));
 
   // Emit LNodes with keys, bands, y and river stacking.
   const nodes: LNode[] = [];

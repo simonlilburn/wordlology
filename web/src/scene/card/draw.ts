@@ -18,8 +18,8 @@ export const FACE = {
 
 /** Chip geometry: shaded rows and the mean only. */
 export const CHIP = {
-  rowsTop: 22,
-  rowsBottom: CARD_H - 118,
+  rowsTop: 20,
+  rowsBottom: CARD_H - 150,
 };
 
 export interface FaceInfo {
@@ -242,15 +242,16 @@ function drawFullRows(
 }
 
 function drawChipRows(g: CanvasRenderingContext2D, d: CardDisplay, o: DrawOptions, top: number, rowH: number, ramp: number[]): void {
-  if (o.lod !== 'chip') return;
+  // Chips keep only the shaded rows (and the bars, which stay legible when small).
+  if (o.lod !== 'chip' || !o.rowBars) return;
   const { theme } = o;
+  const x0 = 24, w = CARD_W - 48;
   for (let i = 0; i < d.n; i++) {
-    const lab = rowLabel(theme, ramp[i]);
-    g.fillStyle = rgbCss(lab, 0.9);
-    g.font = `600 22px ${o.sans}`;
-    g.textAlign = 'left';
-    g.textBaseline = 'middle';
-    g.fillText(rowName(i, d.maxGuesses) === 'Out' ? 'X' : rowName(i, d.maxGuesses), 18, top + (i + 0.5) * rowH);
+    if (d.deterministic && !d.complete && i >= d.bandTop - 0.01) continue;
+    const bw = Math.max(0, Math.min(1, d.shares[i])) * w;
+    if (bw < 0.5) continue;
+    g.fillStyle = rgbCss(rowLabel(theme, ramp[i]), 0.85);
+    g.fillRect(x0, top + (i + 0.5) * rowH - 4, bw, 8);
   }
 }
 
@@ -314,11 +315,12 @@ function drawChipFooter(g: CanvasRenderingContext2D, d: CardDisplay, info: FaceI
   const { theme } = o;
   // Strategy colour strip on top.
   g.fillStyle = rgbCss(hexToRgb(info.colour || '#888888'));
-  g.fillRect(0, 0, CARD_W, o.lod === 'chip' ? 12 : 16);
+  g.fillRect(0, 0, CARD_W, o.lod === 'chip' ? 12 : 20);
   if (o.lod !== 'chip') return;
   g.fillStyle = rgbCss(theme.ink);
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  g.font = `700 64px ${o.sans}`;
-  g.fillText(Number.isFinite(d.mean) ? fmtMean(d.mean, null, provisional) : '…', CARD_W / 2, CHIP.rowsBottom + 60);
+  g.font = `700 104px ${o.sans}`;
+  const text = Number.isFinite(d.mean) ? fmtMean(d.mean, null, provisional) : '…';
+  g.fillText(fitText(g, text, CARD_W - 24), CARD_W / 2, CHIP.rowsBottom + (CARD_H - CHIP.rowsBottom) / 2 + 2);
 }

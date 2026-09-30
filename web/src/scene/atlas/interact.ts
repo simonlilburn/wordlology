@@ -133,7 +133,8 @@ export function ensureTreeTarget(): void {
     return;
   }
   const t = medianTarget(means);
-  if (t >= 0) safe(() => focusTarget(t));
+  // Without changing the level: the zoom gesture or the Tree button is already heading there.
+  if (t >= 0) safe(() => focusTarget(t, false));
 }
 
 /** Shared pointer handling for cards; returns true if handled. */

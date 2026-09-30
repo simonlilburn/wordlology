@@ -1,0 +1,99 @@
+{
+  "config": {
+    "base_seed": 1,
+    "opener": "slate",
+    "replicates": 5,
+    "rules": {
+      "hard_mode": false,
+      "max_guesses": 6
+    },
+    "strategy": {
+      "beta": 1.0,
+      "kind": "info_proportional",
+      "pool": "candidates"
+    },
+    "weighting": "equal",
+    "word_list": {
+      "answers": {
+        "kind": "default"
+      },
+      "id": "ref-en-5",
+      "version": "1.0.0"
+    }
+  },
+  "config_id": "aaaac140df32add2",
+  "counts": [
+    0,
+    377,
+    874,
+    232,
+    15,
+    2,
+    0
+  ],
+  "first_games": [
+    {
+      "path": "slate>media>began",
+      "replicate": 0,
+      "solved": true,
+      "target": "began"
+    },
+    {
+      "path": "slate>owned>video",
+      "replicate": 0,
+      "solved": true,
+      "target": "video"
+    },
+    {
+      "path": "slate>found>funny",
+      "replicate": 0,
+      "solved": true,
+      "target": "funny"
+    },
+    {
+      "path": "slate>stone",
+      "replicate": 0,
+      "solved": true,
+      "target": "stone"
+    },
+    {
+      "path": "slate>those>these",
+      "replicate": 0,
+      "solved": true,
+      "target": "these"
+    },
+    {
+      "path": "slate>there>twice",
+      "replicate": 0,
+      "solved": true,
+      "target": "twice"
+    },
+    {
+      "path": "slate>check>enjoy>river",
+      "replicate": 0,
+      "solved": true,
+      "target": "river"
+    },
+    {
+      "path": "slate>round>brown",
+      "replicate": 0,
+      "solved": true,
+      "target": "brown"
+    }
+  ],
+  "games_blake3": "03a130dc19e0d2966b6230e4fb2d115bc1de6f21b7fc23915ca6d5d4335b75bd",
+  "mean_guesses": "2.92733",
+  "n_games": 1500,
+  "preset": "info_proportional",
+  "se_mean": "0.0127105",
+  "shares": [
+    "0",
+    "0.251333",
+    "0.582667",
+    "0.154667",
+    "0.01",
+    "0.00133333",
+    "0"
+  ],
+  "solver_version": "0.1.0"
+}

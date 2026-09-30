@@ -17,8 +17,10 @@
 import type { Game, ProgressEvent } from '../backend/types';
 import type { CardSnapshot } from './types';
 
-const Z95 = 1.959963984540054;
-const EPS = 1e-12;
+/** z for a two-sided 95% interval (as wl_engine::card::Z95). */
+export const Z95 = 1.96;
+/** Tolerance for cumulative shares in quantiles (as wl_engine::card::QUANTILE_EPS). */
+export const QUANTILE_EPS = 1e-9;
 
 export class CardAccumulator {
   version = 0;
@@ -30,7 +32,6 @@ export class CardAccumulator {
   /** Per target game count (R_t). */
   private rt: Uint32Array;
   private sumN: Float64Array;
-  private sumN2: Float64Array;
   private seenTargets = 0;
   private nGames = 0;
   private maxDepthSeen = 0;
@@ -65,7 +66,6 @@ export class CardAccumulator {
     this.cnt = new Float64Array(nTargets * this.rows);
     this.rt = new Uint32Array(nTargets);
     this.sumN = new Float64Array(nTargets);
-    this.sumN2 = new Float64Array(nTargets);
   }
 
   /** Outcome row of a game: k − 1 for solved in k, maxGuesses for X. */
@@ -86,7 +86,6 @@ export class CardAccumulator {
       this.rt[t]++;
       this.cnt[t * this.rows + row]++;
       this.sumN[t] += n;
-      this.sumN2[t] += n * n;
       this.nGames++;
       if (n > this.maxDepthSeen) this.maxDepthSeen = n;
       const r = g.replicate;
@@ -142,20 +141,21 @@ export class CardAccumulator {
     const est = new Array<number>(rows).fill(0); // Σ_seen w_t y_tk
     let W = 0;
     let meanNum = 0;
-    let sqNum = 0;
+    const g = (k: number) => Math.min(k + 1, this.maxGuesses);
     for (let t = 0; t < N; t++) {
       const R = this.rt[t];
       if (!R) continue;
       const w = this.w[t];
       W += w;
-      meanNum += (w * this.sumN[t]) / R;
-      sqNum += (w * this.sumN2[t]) / R;
+      let guesses = 0;
       for (let k = 0; k < rows; k++) {
         const c = this.cnt[t * rows + k];
         if (!c) continue;
         est[k] += (w * c) / R;
         counts[k] += c * w * N;
+        guesses += c * g(k);
       }
+      meanNum += (w * guesses) / R;
     }
     const hasGames = W > 0;
     // Renormalised estimate (sums to 1 over seen targets).
@@ -164,7 +164,23 @@ export class CardAccumulator {
     const shares = topDown ? est.slice() : renorm;
 
     const mean = hasGames ? meanNum / W : NaN;
-    const sd = hasGames ? Math.sqrt(Math.max(0, sqNum / W - mean * mean)) : NaN;
+    // Weighted population standard deviation over games (two passes, as the Rust card).
+    let sd = NaN;
+    if (hasGames) {
+      let v = 0;
+      for (let t = 0; t < N; t++) {
+        const R = this.rt[t];
+        if (!R) continue;
+        const wr = this.w[t] / R;
+        for (let k = 0; k < rows; k++) {
+          const c = this.cnt[t * rows + k];
+          if (!c) continue;
+          const d = g(k) - mean;
+          v += wr * c * d * d;
+        }
+      }
+      sd = Math.sqrt(v / W);
+    }
 
     // Quantiles over the renormalised distribution, X counted as max + 1.
     const quantile = (q: number): number => {
@@ -172,7 +188,7 @@ export class CardAccumulator {
       let cum = 0;
       for (let k = 0; k < rows; k++) {
         cum += renorm[k];
-        if (cum >= q - EPS) return k + 1;
+        if (cum >= q - QUANTILE_EPS) return k + 1;
       }
       return rows;
     };
@@ -210,23 +226,25 @@ export class CardAccumulator {
           bands.push([0, 1]);
           continue;
         }
+        // s² is the (weighted) sample variance of the per-target indicator, as the Rust card.
+        const sk = renorm[k];
         let ss = 0;
         for (let t = 0; t < N; t++) {
           const R = this.rt[t];
           if (!R) continue;
           const y = this.cnt[t * rows + k] / R;
-          const w = this.w[t];
-          ss += w * w * (y - s) * (y - s);
+          ss += this.w[t] * (y - sk) * (y - sk);
         }
-        const v = (1 - n / N) * (n / (n - 1)) * (ss / (W * W));
-        half = Z95 * Math.sqrt(Math.max(0, v));
+        const s2 = ((ss / W) * n) / (n - 1);
+        const fpc = 1 - n / N;
+        half = Z95 * Math.sqrt(Math.max(0, (fpc * s2) / n));
       } else {
         half = shareSeAll ? Z95 * shareSeAll[k] : 0;
       }
       bands.push([Math.max(0, s - half), Math.min(1, s + half)]);
     }
 
-    const solveRate = shares.slice(0, rows - 1).reduce((a, b) => a + b, 0);
+    const solveRate = !hasGames ? NaN : topDown ? shares.slice(0, rows - 1).reduce((a, b) => a + b, 0) : 1 - renorm[rows - 1];
     let settledDepth: number | undefined;
     let unresolved: number | undefined;
     if (this.deterministic) {
@@ -341,4 +359,292 @@ export function sampleSd(xs: number[]): number {
   let ss = 0;
   for (const x of xs) ss += (x - m) * (x - m);
   return Math.sqrt(ss / (n - 1));
+}
+
+// ---------------------------------------------------------------------------
+// Exact card statistics, a line-by-line port of wl_engine::card (snapshot,
+// RankMetric). Exports and rankings use these so the browser writes the same
+// numbers as the CLI; the incremental CardAccumulator above drives the views.
+
+/** A card as the Rust engine computes it (see crates/wl-engine/src/card.rs). */
+export interface CardStats {
+  maxGuesses: number;
+  /** Raw game counts per row. */
+  counts: number[];
+  /** Weighted share per row, renormalised over the targets seen. */
+  shares: number[];
+  bands: [number, number][];
+  /** Standard error per row across replicates (stochastic, at least 2 replicates). */
+  shareSe: number[] | null;
+  mean: number;
+  meanSe: number | null;
+  sd: number;
+  median: number;
+  p95: number;
+  solveRate: number;
+  nGames: number;
+  nTargetsSeen: number;
+  nTargets: number;
+  deterministic: boolean;
+  /** Per-replicate cards: replicate, shares, mean. */
+  replicateCards: { replicate: number; shares: number[]; mean: number }[];
+}
+
+/**
+ * Raw card weights per answer index as the Rust engine uses them: 1 for equal
+ * weighting, `10^zipf` for frequency weighting (cards normalise over the
+ * targets seen, so the weights need not sum to 1).
+ */
+export function rawTargetWeights(zipfOfAnswer: ArrayLike<number> | null, nAnswers: number, weighting: 'equal' | 'frequency'): Float64Array {
+  const w = new Float64Array(nAnswers).fill(1);
+  if (weighting === 'frequency' && zipfOfAnswer) for (let a = 0; a < nAnswers; a++) w[a] = Math.pow(10, zipfOfAnswer[a] ?? 0);
+  return w;
+}
+
+function outcomeRow(g: Game, maxGuesses: number): number {
+  if (!g.solved) return maxGuesses;
+  return Math.min(Math.max(g.turns.length, 1) - 1, maxGuesses - 1);
+}
+
+function exactQuantile(shares: number[], q: number): number {
+  let cum = 0;
+  for (let k = 0; k < shares.length; k++) {
+    cum += shares[k];
+    if (cum >= q - QUANTILE_EPS) return k + 1;
+  }
+  return shares.length;
+}
+
+/** Sample sd as the Rust helper (n − 1 denominator; NaN below two values). */
+function rustSampleSd(xs: number[]): number {
+  const n = xs.length;
+  let sum = 0;
+  for (const x of xs) sum += x;
+  const mean = sum / n;
+  let ss = 0;
+  for (const x of xs) ss += (x - mean) * (x - mean);
+  return Math.sqrt(ss / (n - 1));
+}
+
+/**
+ * The card of a set of games (player games skipped), computed exactly as
+ * `wl_engine::card::CardAccumulator::snapshot`: from outcomes sorted by
+ * (target, replicate), so it does not depend on arrival order.
+ * `weights` holds one weight per answer index (missing = 1).
+ */
+export function cardStats(
+  games: readonly Game[],
+  maxGuesses: number,
+  nTargets: number,
+  deterministic: boolean,
+  weights: ArrayLike<number> | null = null,
+): CardStats {
+  const recs: [number, number, number][] = [];
+  for (const g of games) if (!g.isPlayer) recs.push([g.target, g.replicate, outcomeRow(g, maxGuesses)]);
+  return cardFromRecords(recs, maxGuesses, nTargets, deterministic, weights);
+}
+
+/** A game's outcome record for cardFromRecords: [answer index, replicate, outcome row]. */
+export function outcomeRecord(g: Game, maxGuesses: number): [number, number, number] {
+  return [g.target, g.replicate, outcomeRow(g, maxGuesses)];
+}
+
+/** cardStats from outcome records [target, replicate, row] (any order; sorted here). */
+export function cardFromRecords(
+  records: [number, number, number][],
+  maxGuesses: number,
+  nTargets: number,
+  deterministic: boolean,
+  weights: ArrayLike<number> | null = null,
+): CardStats {
+  const m = maxGuesses;
+  const rows = m + 1;
+  const recs = records.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]);
+  const weight = (t: number) => (weights && t < weights.length && weights[t] !== undefined ? weights[t] : 1);
+  const rowGuesses = (k: number) => Math.min(k + 1, m);
+
+  const targets: { t: number; c: number[] }[] = [];
+  for (const [t, , k] of recs) {
+    if (!targets.length || targets[targets.length - 1].t !== t) targets.push({ t, c: new Array(rows).fill(0) });
+    targets[targets.length - 1].c[k]++;
+  }
+  const counts = new Array<number>(rows).fill(0);
+  const shares = new Array<number>(rows).fill(0);
+  let wTotal = 0;
+  let mean = 0;
+  for (const { t, c } of targets) {
+    const w = weight(t);
+    let rt = 0;
+    for (const x of c) rt += x;
+    wTotal += w;
+    let guesses = 0;
+    for (let k = 0; k < rows; k++) {
+      counts[k] += c[k];
+      shares[k] += (w * c[k]) / rt;
+      guesses += c[k] * rowGuesses(k);
+    }
+    mean += (w * guesses) / rt;
+  }
+  const nSeen = targets.length;
+  let sd = NaN;
+  if (nSeen === 0) mean = NaN;
+  else {
+    for (let k = 0; k < rows; k++) shares[k] /= wTotal;
+    mean /= wTotal;
+    let v = 0;
+    for (const { t, c } of targets) {
+      let rt = 0;
+      for (const x of c) rt += x;
+      const w = weight(t) / rt;
+      for (let k = 0; k < rows; k++) {
+        const d = rowGuesses(k) - mean;
+        v += w * c[k] * d * d;
+      }
+    }
+    sd = Math.sqrt(v / wTotal);
+  }
+  const median = nSeen === 0 ? NaN : exactQuantile(shares, 0.5);
+  const p95 = nSeen === 0 ? NaN : exactQuantile(shares, 0.95);
+  const solveRate = nSeen === 0 ? NaN : 1 - shares[m];
+
+  // Per replicate: the card of replicate r alone (replicates in ascending order).
+  const perRep = new Map<number, { wk: number[]; w: number; wn: number }>();
+  for (const [t, r, k] of recs) {
+    const w = weight(t);
+    let e = perRep.get(r);
+    if (!e) perRep.set(r, (e = { wk: new Array(rows).fill(0), w: 0, wn: 0 }));
+    e.wk[k] += w;
+    e.w += w;
+    e.wn += w * rowGuesses(k);
+  }
+  const replicateCards = [...perRep.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([replicate, e]) => ({ replicate, shares: e.wk.map((x) => x / e.w), mean: e.wn / e.w }));
+  const nReps = replicateCards.length;
+  let shareSe: number[] | null = null;
+  let meanSe: number | null = null;
+  if (!deterministic && nReps >= 2) {
+    const se = (xs: number[]) => rustSampleSd(xs) / Math.sqrt(nReps);
+    shareSe = [];
+    for (let k = 0; k < rows; k++) shareSe.push(se(replicateCards.map((c) => c.shares[k])));
+    meanSe = se(replicateCards.map((c) => c.mean));
+  }
+
+  const bands: [number, number][] = [];
+  for (let k = 0; k < rows; k++) {
+    const s = shares[k];
+    let half: number;
+    if (deterministic || nSeen === 0) half = 0;
+    else if (nSeen < nTargets) {
+      if (nSeen < 2) half = Infinity;
+      else {
+        const n = nSeen;
+        let ss = 0;
+        for (const { t, c } of targets) {
+          let rt = 0;
+          for (const x of c) rt += x;
+          const x = c[k] / rt;
+          ss += weight(t) * (x - s) * (x - s);
+        }
+        const s2 = ((ss / wTotal) * n) / (n - 1);
+        const fpc = 1 - n / nTargets;
+        half = Z95 * Math.sqrt((fpc * s2) / n);
+      }
+    } else half = shareSe ? Z95 * shareSe[k] : 0;
+    bands.push([Math.max(s - half, 0), Math.min(s + half, 1)]);
+  }
+
+  return {
+    maxGuesses: m,
+    counts,
+    shares,
+    bands,
+    shareSe,
+    mean,
+    meanSe,
+    sd,
+    median,
+    p95,
+    solveRate,
+    nGames: recs.length,
+    nTargetsSeen: nSeen,
+    nTargets,
+    deterministic,
+    replicateCards,
+  };
+}
+
+export type RankMetricKind = 'mean' | 'fail_rate' | 'le3' | 'mean_fail_plus';
+
+/** A ranking metric from a card's shares and mean (as RankMetric::of). */
+export function metricOf(metric: RankMetricKind, shares: number[], mean: number): number {
+  const m = shares.length - 1;
+  switch (metric) {
+    case 'mean':
+      return mean;
+    case 'fail_rate':
+      return shares[m];
+    case 'le3': {
+      let s = 0;
+      for (let k = 0; k < Math.min(m, 3); k++) s += shares[k];
+      return s;
+    }
+    case 'mean_fail_plus': {
+      let s = 0;
+      for (let k = 0; k < shares.length; k++) s += (k + 1) * shares[k];
+      return s;
+    }
+  }
+}
+
+/**
+ * A metric's value with a 95% interval: ± 1.96 times the standard error
+ * across replicate cards (the value itself when exact), as RankMetric::value.
+ */
+export function metricValue(metric: RankMetricKind, card: CardStats): [number, number, number] {
+  const v = metricOf(metric, card.shares, card.mean);
+  const n = card.replicateCards.length;
+  if (card.deterministic || n < 2) return [v, v, v];
+  const per = card.replicateCards.map((c) => metricOf(metric, c.shares, c.mean));
+  const half = (Z95 * rustSampleSd(per)) / Math.sqrt(n);
+  return [v, v - half, v + half];
+}
+
+/** Mean guesses per target over its strategy games (player games skipped), as target_means. */
+export function targetMeans(games: readonly Game[]): Map<number, number> {
+  const acc = new Map<number, [number, number]>();
+  for (const g of games) {
+    if (g.isPlayer) continue;
+    const e = acc.get(g.target);
+    if (e) {
+      e[0] += g.turns.length;
+      e[1]++;
+    } else acc.set(g.target, [g.turns.length, 1]);
+  }
+  const out = new Map<number, number>();
+  for (const t of [...acc.keys()].sort((a, b) => a - b)) {
+    const [s, n] = acc.get(t)!;
+    out.set(t, s / n);
+  }
+  return out;
+}
+
+/** One row of paired.csv. */
+export interface PairRow {
+  target: number;
+  meanA: number;
+  meanB: number;
+  diff: number;
+}
+
+/** Target-by-target comparison over the targets both have played, in answer order (as pair_rows). */
+export function pairRows(a: readonly Game[], b: readonly Game[]): PairRow[] {
+  const ma = targetMeans(a);
+  const mb = targetMeans(b);
+  const out: PairRow[] = [];
+  for (const [t, x] of ma) {
+    const y = mb.get(t);
+    if (y !== undefined) out.push({ target: t, meanA: x, meanB: y, diff: x - y });
+  }
+  return out;
 }

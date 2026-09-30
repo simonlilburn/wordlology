@@ -91,10 +91,21 @@ export function fitView(r: Rect, vp: Viewport, m: Margins, maxScale = 3): View {
   return { cx: r.x + r.w / 2 - offX, cy: r.y + r.h / 2 - offY, scale };
 }
 
-/** The Card view of one cell: the card fills most of the viewport height. */
+/**
+ * The Card view of one cell: the card large, with the right and lower
+ * neighbours (or the dashed "+ Strategy" / "+ Opener" cards) peeking in.
+ */
 export function cardView(r: Rect, vp: Viewport, maxScale = 2.4): View {
-  const scale = Math.min(maxScale, (vp.width * 0.84) / r.w, (vp.height * 0.84) / r.h);
-  return { cx: r.x + r.w / 2, cy: r.y + r.h / 2, scale: Math.max(0.05, scale) };
+  const region = cardRegion(r);
+  const scale = Math.min(maxScale, (vp.width * 0.96) / region.w, (vp.height * 0.96) / region.h);
+  return { cx: region.x + region.w / 2, cy: region.y + region.h / 2, scale: Math.max(0.05, scale) };
+}
+
+/** The layout region the Card view fits: the card plus a peek at its right and lower neighbours. */
+export function cardRegion(r: Rect): Rect {
+  const pad = 20;
+  const peekX = Math.round(CARD_W * 0.42), peekY = Math.round(CARD_H * 0.3);
+  return { x: r.x - pad, y: r.y - pad, w: r.w + pad + GAP + peekX, h: r.h + pad + GAP + peekY };
 }
 
 /** Interpolate views: centre linearly, scale geometrically. */

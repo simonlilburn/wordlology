@@ -78,7 +78,7 @@ export function atlasFrame(z: number): AtlasFrame {
     viewT: smootherstep(2, 3, z),
     neighbourAlpha: smoothstep(1.86, 2.0, z),
     dashedAlpha: smoothstep(1.88, 2.02, z),
-    headerAlpha: smoothstep(1.9, 2.1, z),
+    headerAlpha: smoothstep(2.35, 2.75, z),
   };
 }
 

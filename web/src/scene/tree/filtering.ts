@@ -30,8 +30,17 @@ export function bfsOrder(root: TrieNode): TrieNode[] {
 /**
  * Compute match data for every node. `matches(n)` decides a single node
  * (scope included); the root never matches. `size` bounds the node ids.
+ * `massOf` gives the games through a node (default: its mass; the growth
+ * animation passes the revealed mass).
  */
-export function computeTreeFilter(root: TrieNode, size: number, matches: (n: TrieNode) => boolean, mode: 'highlight' | 'isolate', maxGuesses: number): TreeFilter {
+export function computeTreeFilter(
+  root: TrieNode,
+  size: number,
+  matches: (n: TrieNode) => boolean,
+  mode: 'highlight' | 'isolate',
+  maxGuesses: number,
+  massOf: (n: TrieNode) => number = (n) => n.mass,
+): TreeFilter {
   const order = bfsOrder(root);
   let n = size;
   for (const x of order) if (x.id + 1 > n) n = x.id + 1;
@@ -53,7 +62,7 @@ export function computeTreeFilter(root: TrieNode, size: number, matches: (n: Tri
   for (let i = order.length - 1; i >= 0; i--) {
     const x = order[i];
     below[x.id] += match[x.id];
-    if (above[x.id]) fmass[x.id] = x.mass;
+    if (above[x.id]) fmass[x.id] = massOf(x);
     else {
       let s = 0;
       for (const c of x.children) s += fmass[c.id];

@@ -2,7 +2,7 @@
 // top of it. Each layer owns its own meshes; faces (textures) are shared.
 
 import * as THREE from 'three';
-import type { Rect } from '../atlas/layout';
+import { CARD_H, CARD_W, type Rect } from '../atlas/layout';
 import type { director as Dir } from './director';
 import { GHOST_RECT, type CardFace } from './face';
 
@@ -55,13 +55,13 @@ export class CardMeshes {
   place(d: typeof Dir, r: Rect, wz = 0): void {
     const c = d.layoutToWorld(r.x + r.w / 2, r.y + r.h / 2);
     this.face.position.set(c.x, c.y, wz);
-    this.face.scale.set(r.w, r.h * d.yUp, 1);
-    const gx = r.x + (GHOST_RECT.x / 360) * r.w;
-    const gy = r.y + (GHOST_RECT.y / 480) * r.h;
-    const gw = (GHOST_RECT.w / 360) * r.w, gh = (GHOST_RECT.h / 480) * r.h;
+    this.face.scale.set(r.w * d.k, r.h * d.k * d.yUp, 1);
+    const gx = r.x + (GHOST_RECT.x / CARD_W) * r.w;
+    const gy = r.y + (GHOST_RECT.y / CARD_H) * r.h;
+    const gw = (GHOST_RECT.w / CARD_W) * r.w, gh = (GHOST_RECT.h / CARD_H) * r.h;
     const g = d.layoutToWorld(gx + gw / 2, gy + gh / 2);
     this.ghost.position.set(g.x, g.y, wz + 0.01);
-    this.ghost.scale.set(gw, gh * d.yUp, 1);
+    this.ghost.scale.set(gw * d.k, gh * d.k * d.yUp, 1);
   }
 
   setAlpha(face: number, ghost: number): void {

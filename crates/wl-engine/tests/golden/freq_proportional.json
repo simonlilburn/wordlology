@@ -1,0 +1,98 @@
+{
+  "config": {
+    "base_seed": 1,
+    "opener": "slate",
+    "replicates": 5,
+    "rules": {
+      "hard_mode": false,
+      "max_guesses": 6
+    },
+    "strategy": {
+      "beta": 1.0,
+      "kind": "freq_proportional"
+    },
+    "weighting": "equal",
+    "word_list": {
+      "answers": {
+        "kind": "default"
+      },
+      "id": "ref-en-5",
+      "version": "1.0.0"
+    }
+  },
+  "config_id": "300a1ac122d76f6e",
+  "counts": [
+    0,
+    366,
+    869,
+    238,
+    27,
+    0,
+    0
+  ],
+  "first_games": [
+    {
+      "path": "slate>media>cheap",
+      "replicate": 0,
+      "solved": true,
+      "target": "cheap"
+    },
+    {
+      "path": "slate>would>lucky",
+      "replicate": 0,
+      "solved": true,
+      "target": "lucky"
+    },
+    {
+      "path": "slate>ready>heavy",
+      "replicate": 0,
+      "solved": true,
+      "target": "heavy"
+    },
+    {
+      "path": "slate>again>grand",
+      "replicate": 0,
+      "solved": true,
+      "target": "grand"
+    },
+    {
+      "path": "slate>which>young>group",
+      "replicate": 0,
+      "solved": true,
+      "target": "group"
+    },
+    {
+      "path": "slate>light>truly",
+      "replicate": 0,
+      "solved": true,
+      "target": "truly"
+    },
+    {
+      "path": "slate>below>field>lived",
+      "replicate": 0,
+      "solved": true,
+      "target": "lived"
+    },
+    {
+      "path": "slate>level>model",
+      "replicate": 0,
+      "solved": true,
+      "target": "model"
+    }
+  ],
+  "games_blake3": "2fe29bd2c9c0078d7ffd3e69e406042007461d1c3ea7eadaacae09df110fd3cf",
+  "mean_guesses": "2.95067",
+  "n_games": 1500,
+  "preset": "freq_proportional",
+  "se_mean": "0.00487625",
+  "shares": [
+    "0",
+    "0.244",
+    "0.579333",
+    "0.158667",
+    "0.018",
+    "0",
+    "0"
+  ],
+  "solver_version": "0.1.0"
+}

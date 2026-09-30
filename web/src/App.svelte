@@ -10,6 +10,7 @@
   import StrategyLab from './lab/StrategyLab.svelte';
   import Dialogs from './panes/Dialogs.svelte';
   import Toasts from './app/Toasts.svelte';
+  import ExportDialog from './export/ExportDialog.svelte';
   import { app } from './app/store.svelte';
 </script>
 
@@ -23,6 +24,7 @@
   <SidePane />
   <StrategyLab />
   <Dialogs />
+  <ExportDialog />
   <Toasts />
 </div>
 

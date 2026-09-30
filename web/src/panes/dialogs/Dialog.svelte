@@ -21,9 +21,11 @@
     footer?: Snippet;
     /** Extra controls in the header, before the close button. */
     headerExtra?: Snippet;
+    /** Where focus goes on open: the first control in the body (forms), or the close button (text to read). */
+    initialFocus?: 'body' | 'close';
   }
 
-  let { open, title, onclose, size = 'md', subtitle, children, footer, headerExtra }: Props = $props();
+  let { open, title, onclose, size = 'md', subtitle, children, footer, headerExtra, initialFocus = 'body' }: Props = $props();
 
   const id = `dlg-${nextId++}`;
   let el: HTMLDialogElement | undefined = $state();
@@ -50,8 +52,8 @@
       // Focus the first control in the body (not the close button) once rendered.
       queueMicrotask(() => {
         const body = d.querySelector<HTMLElement>('[data-dialog-body]');
-        const first = body?.querySelector<HTMLElement>('[autofocus], ' + FOCUSABLE);
-        (first ?? d.querySelector<HTMLElement>('[data-dialog-close]'))?.focus();
+        const first = initialFocus === 'body' ? body?.querySelector<HTMLElement>('[autofocus], ' + FOCUSABLE) : null;
+        (first ?? d.querySelector<HTMLElement>('[data-dialog-close]'))?.focus({ preventScroll: true });
       });
     } else if (!open && d.open) {
       try {

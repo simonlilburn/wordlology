@@ -60,7 +60,7 @@
           {#if s}
             <span title="Expected / observed information in bits">{fmtBits(s.bitsExpected)}/{fmtBits(s.bitsObserved)} b</span>
           {/if}
-          {#if m?.phase}<span class="phase" class:player={m.source === 'player'}>{m.phase}</span>{/if}
+          {#if m?.phase}<span class="phase" class:player={m.source === 'player'} title="Phase: {m.phase}">{m.phase}</span>{/if}
         </div>
       {/if}
     </div>
