@@ -198,6 +198,11 @@ solver.summary(run) -> string                      JSON SummaryEvent fields
 solver.cancel(run)
 solver.scores(config_json, history_json, top_k) -> string    JSON ScoresResult
 solver.openerInfo(config_json) -> Float64Array     one-step expected information of every guess
+solver.continueGame(config_json, target, history_json, replicate, one_step) -> Uint8Array
+                                                   one game continued from a prefix of guess ids with
+                                                   the stream of (target, replicate); the prefix turns
+                                                   are recomputed, so the stream is advanced exactly as
+                                                   if the strategy had played them
 solver.schemas() -> string                         JSON StrategySchema[]
 solver.presets() -> string                         JSON Preset[]
 feedback(guess, target) -> u16                     (free function)
@@ -214,6 +219,7 @@ Main thread → worker (`postMessage`):
 { type: 'scores', reqId, key, config, history, topK }
 { type: 'openerInfo', reqId, key, config }
 { type: 'configId', reqId, key, config }
+{ type: 'continue', reqId, key, config, target, history, replicate, oneStep }   // result: binary batch of 1 game
 { type: 'meta', reqId }                                          // schemas, presets, solver version
 ```
 
@@ -257,6 +263,9 @@ TypeScript, Vite, Svelte 5 for the DOM, three.js for the scene.
 - **Trees** (`web/src/model/trie.ts`): `TargetTrie` implements `TargetTree`.
 - **Cards** (`web/src/model/card.ts`): `CardAccumulator` turns games into a
   `CardSnapshot` using the formulas above.
+- **Board markup**: the Game view renders `<div data-board>` containing rows
+  `[data-row="i"]` of tiles `[data-tile]`, so the Game → Tree transition can
+  measure them and replace them with WebGL tiles at the same positions.
 - **Filter** (`web/src/model/filter.ts`): parser, formatter and matcher for
   the letter filter (grammar below), mirrored by `wl_core::filter`.
 

@@ -227,4 +227,20 @@ export interface SolverBackend {
   openerInfo?(config: Config, signal?: AbortSignal): Promise<Float64Array>;
   /** Config ID computed exactly as the solver does. */
   configId?(config: Config): Promise<string>;
+  /**
+   * Continue a game from a prefix with the strategy, using the random stream of
+   * (target, replicate). Used by replay's Next button ("a fresh seeded draw").
+   */
+  continueGame?(req: ContinueRequest, signal?: AbortSignal): Promise<Game>;
+}
+
+export interface ContinueRequest {
+  config: Config;
+  /** Answer index of the target. */
+  target: number;
+  /** Guesses already made (word ids); their patterns follow from the target. */
+  history: number[];
+  replicate: number;
+  /** Play only the next guess (true) or the rest of the game (false). */
+  oneStep: boolean;
 }
