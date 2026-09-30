@@ -161,7 +161,10 @@ fn equal_keys_give_equal_distributions() {
                 }
             }
             // Candidate-keyed strategies share entries across histories.
-            if matches!(spec, StrategySpec::MaxInfo { pool: Pool::Candidates } | StrategySpec::Random { pool: Pool::Candidates }) {
+            if matches!(
+                spec,
+                StrategySpec::MaxInfo { pool: Pool::Candidates } | StrategySpec::Random { pool: Pool::Candidates }
+            ) {
                 assert!(shared > 0, "{}", spec.canonical_json());
             }
         }
@@ -406,12 +409,18 @@ fn build_errors() {
     let bare = WordList::from_words(wl_core::Manifest::adhoc("bare", 5), &["crane", "slate"], &["crane"]).unwrap();
     let err = |json: &str, l: &WordList| spec(json).build(l).err();
     assert_eq!(
-        err(r#"{"kind":"sequence_then","words":["slate","qqqqq"],"switch":{"when":"sequence_exhausted"},"then":{"kind":"random"}}"#, &list),
+        err(
+            r#"{"kind":"sequence_then","words":["slate","qqqqq"],"switch":{"when":"sequence_exhausted"},"then":{"kind":"random"}}"#,
+            &list
+        ),
         Some(BuildError::UnknownWord("qqqqq".into()))
     );
     // Frequencies are needed wherever the part sits.
     assert_eq!(
-        err(r#"{"kind":"mixture","weights":[1,1],"strategies":[{"kind":"random"},{"kind":"solve_when_le","n":2,"inner":{"kind":"freq_proportional"}}]}"#, &bare),
+        err(
+            r#"{"kind":"mixture","weights":[1,1],"strategies":[{"kind":"random"},{"kind":"solve_when_le","n":2,"inner":{"kind":"freq_proportional"}}]}"#,
+            &bare
+        ),
         Some(BuildError::NeedsFrequencies("freq_proportional"))
     );
     assert_eq!(
@@ -456,11 +465,15 @@ fn cost_guard_flags_allowed_pool_information() {
     assert!(cost(r#"{"kind":"most_frequent"}"#) < cheap);
     // A switch pays for its dearer side; a mixture for every weighted part.
     assert_eq!(
-        cost(r#"{"kind":"switch","first":{"kind":"max_info","pool":"allowed"},"then":{"kind":"random"},"when":{"when":"after_turns","k":1}}"#),
+        cost(
+            r#"{"kind":"switch","first":{"kind":"max_info","pool":"allowed"},"then":{"kind":"random"},"when":{"when":"after_turns","k":1}}"#
+        ),
         dear
     );
     assert_eq!(
-        cost(r#"{"kind":"mixture","weights":[1,1],"strategies":[{"kind":"max_info"},{"kind":"max_info","pool":"allowed"}]}"#),
+        cost(
+            r#"{"kind":"mixture","weights":[1,1],"strategies":[{"kind":"max_info"},{"kind":"max_info","pool":"allowed"}]}"#
+        ),
         cheap + dear
     );
 }

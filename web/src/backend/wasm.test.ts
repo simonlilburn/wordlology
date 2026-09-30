@@ -2,7 +2,8 @@
 // host, the pool (sharding, priorities), LocalWasmBackend, the cache and the
 // run manager. Skipped while web/src/wasm/pkg has not been built.
 
-import { existsSync, readFileSync } from 'node:fs';
+import { fs } from '../model/testing';
+const { existsSync, readFileSync } = fs;
 import { beforeAll, describe, expect, it } from 'vitest';
 import { cardStats } from '../model/card';
 import { feedback, allCorrect } from '../model/feedback';

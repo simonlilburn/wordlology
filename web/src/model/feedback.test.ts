@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { fs } from './testing';
+const readFileSync = fs.readFileSync;
 import { describe, expect, it } from 'vitest';
 import { allCorrect, feedback, patternCells, patternFromLetters, patternLetters } from './feedback';
 

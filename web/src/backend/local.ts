@@ -6,7 +6,7 @@ import type { WordData } from '../model/types';
 import { decodeBatches } from './decode';
 import { WorkerPool, type Job, type WorkerLike } from './pool';
 import type { MetaResult } from './protocol';
-import { ForwardingRunStream, type RunStream } from './stream';
+import { ForwardingRunStream, plain, type RunStream } from './stream';
 import type {
   Capabilities,
   Config,
@@ -88,7 +88,9 @@ export class LocalWasmBackend implements SolverBackend {
     return [(await res.json()) as WordListManifest];
   }
 
-  run(req: RunRequest, signal: AbortSignal): RunStream {
+  run(request: RunRequest, signal: AbortSignal): RunStream {
+    // Callers may pass Svelte $state proxies, which cannot be posted to a worker.
+    const req = plain({ config: request.config, scope: request.scope, priority: request.priority });
     const out = new ForwardingRunStream();
     const key = configListKey(req.config);
     const deterministic = isDeterministicSpec(req.config.strategy);
@@ -135,7 +137,8 @@ export class LocalWasmBackend implements SolverBackend {
     return out;
   }
 
-  configId(config: Config): Promise<string> {
+  configId(configIn: Config): Promise<string> {
+    const config = plain(configIn);
     const k = localConfigKey(config);
     let p = this.configIds.get(k);
     if (!p) {
@@ -149,7 +152,8 @@ export class LocalWasmBackend implements SolverBackend {
     return p;
   }
 
-  scores(req: ScoresRequest, signal?: AbortSignal): Promise<ScoresResult> {
+  scores(request: ScoresRequest, signal?: AbortSignal): Promise<ScoresResult> {
+    const req = plain(request);
     const key = configListKey(req.config);
     const p = this.pool.request<ScoresResult>(
       (reqId) => ({ type: 'scores', reqId, key, config: req.config, history: req.history, topK: req.topK }),
@@ -158,7 +162,8 @@ export class LocalWasmBackend implements SolverBackend {
     return withSignal(p, signal);
   }
 
-  openerInfo(config: Config, signal?: AbortSignal): Promise<Float64Array> {
+  openerInfo(configIn: Config, signal?: AbortSignal): Promise<Float64Array> {
+    const config = plain(configIn);
     const key = configListKey(config);
     const k = `${key}|${config.rules.hard_mode}|${config.rules.max_guesses}`;
     let p = this.openerInfos.get(k);
@@ -170,7 +175,8 @@ export class LocalWasmBackend implements SolverBackend {
     return withSignal(p, signal);
   }
 
-  async continueGame(req: ContinueRequest, signal?: AbortSignal): Promise<Game> {
+  async continueGame(request: ContinueRequest, signal?: AbortSignal): Promise<Game> {
+    const req = plain(request);
     const key = configListKey(req.config);
     const buffer = await withSignal(
       this.pool.request<ArrayBuffer>(

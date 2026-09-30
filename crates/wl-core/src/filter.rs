@@ -163,7 +163,6 @@ fn vowel_mask(y_vowel: bool) -> u32 {
     }
 }
 
-
 impl Slot {
     pub const ANY: Slot = Slot { negate: false, value: SlotValue::Any };
 
@@ -203,7 +202,9 @@ impl Slot {
         let negate = self.negate;
         match &self.value {
             SlotValue::Any => Slot::ANY,
-            SlotValue::Letter { letter } => Slot { negate, value: SlotValue::Letter { letter: letter.to_ascii_lowercase() } },
+            SlotValue::Letter { letter } => {
+                Slot { negate, value: SlotValue::Letter { letter: letter.to_ascii_lowercase() } }
+            }
             SlotValue::Set { letters } => {
                 let m = mask_of(letters.chars());
                 match m.count_ones() {
@@ -432,13 +433,8 @@ impl Parser<'_> {
             seen_extra = true;
             self.skip_space();
         }
-        Ok(Rule {
-            slots,
-            contains: letters_of(contains).collect(),
-            excludes: letters_of(excludes).collect(),
-            repeated,
-        }
-        .normalized())
+        Ok(Rule { slots, contains: letters_of(contains).collect(), excludes: letters_of(excludes).collect(), repeated }
+            .normalized())
     }
 
     /// One slot, starting at a non-space character.
@@ -921,7 +917,8 @@ mod tests {
             };
             let y = c["y_vowel"].as_bool().unwrap();
             for n in c["nodes"].as_array().unwrap() {
-                let (w, turn, fin) = (n["word"].as_str().unwrap(), n["turn"].as_u64().unwrap() as u32, n["is_final"].as_bool().unwrap());
+                let (w, turn, fin) =
+                    (n["word"].as_str().unwrap(), n["turn"].as_u64().unwrap() as u32, n["is_final"].as_bool().unwrap());
                 assert_eq!(f.matches_node(w, turn, fin, y), n["matches"].as_bool().unwrap(), "{c} {n}");
             }
         }

@@ -17,7 +17,7 @@
 import { isDeterministicSpec } from '../app/config';
 import { decodeBatches } from './decode';
 import { normaliseSummary } from './protocol';
-import { ForwardingRunStream, controlsOf, scopeKey, type RunStream } from './stream';
+import { ForwardingRunStream, controlsOf, plain, scopeKey, type RunStream } from './stream';
 import type {
   Capabilities,
   Config,
@@ -97,7 +97,8 @@ export class StaticBackend implements SolverBackend {
     return index.get(`${id}|${scopeKey(scope, reps)}`) ?? null;
   }
 
-  run(req: RunRequest, signal: AbortSignal): RunStream {
+  run(request: RunRequest, signal: AbortSignal): RunStream {
+    const req = plain({ config: request.config, scope: request.scope, priority: request.priority });
     const out = new ForwardingRunStream();
     void (async () => {
       let entry: StaticEntry | null = null;

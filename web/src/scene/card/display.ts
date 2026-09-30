@@ -23,6 +23,11 @@ export interface CardDisplay {
   bandTop: number;
   complete: boolean;
   deterministic: boolean;
+  /**
+   * Mean, solve rate and p95 are lower bounds (a deterministic card filling
+   * top-down: every unresolved game needs at least settledDepth + 1 guesses).
+   */
+  lowerBound: boolean;
   nTargetsDone: number;
   nTargets: number;
   nGames: number;
@@ -48,6 +53,7 @@ export function emptyDisplay(maxGuesses: number, deterministic = false): CardDis
     bandTop: deterministic ? 0 : n,
     complete: false,
     deterministic,
+    lowerBound: false,
     nTargetsDone: 0,
     nTargets: 0,
     nGames: 0,
@@ -92,6 +98,11 @@ export function displayFromSnapshot(s: CardSnapshot, replicates: number): CardDi
     d.counts = Array.from({ length: n }, (_, i) => fin(s.counts[i]));
     const settled = s.settledDepth ?? 0;
     d.bandTop = uf > 0 ? Math.max(0, Math.min(n, settled)) : n;
+    const b = topDownBounds(shares, s.mean, settled, s.maxGuesses);
+    d.mean = b.mean;
+    d.solveRate = b.solveRate;
+    d.p95 = b.p95;
+    d.lowerBound = true;
     return d;
   }
   d.unresolvedFrac = 0;
@@ -104,6 +115,39 @@ export function displayFromSnapshot(s: CardSnapshot, replicates: number): CardDi
     ? Array.from({ length: n }, (_, i) => fin(s.counts[i]))
     : shares.map((x) => x * expectedGames);
   return d;
+}
+
+/**
+ * Lower bounds for a deterministic card filling top-down. `shares` are
+ * fractions of all targets for the games settled so far (they sum to the
+ * settled weight); the rest need at least settledDepth + 1 guesses.
+ */
+export function topDownBounds(
+  shares: number[],
+  meanSeen: number,
+  settledDepth: number,
+  maxGuesses: number,
+): { mean: number; solveRate: number; p95: number } {
+  let seen = 0;
+  for (const x of shares) seen += x;
+  seen = clamp01(seen);
+  const rest = 1 - seen;
+  const next = Math.min(maxGuesses, settledDepth + 1);
+  const mean = seen > 0 && Number.isFinite(meanSeen) ? meanSeen * seen + rest * next : rest > 0 ? next : NaN;
+  let solveRate = 0;
+  for (let i = 0; i < Math.min(maxGuesses, shares.length); i++) solveRate += shares[i];
+  // p95 with the unresolved mass at the earliest row it can still reach (X counts as max + 1).
+  let cum = 0;
+  let p95 = maxGuesses + 1;
+  for (let k = 1; k <= maxGuesses + 1; k++) {
+    cum += shares[k - 1] ?? 0;
+    if (k === next + 0 && rest > 0) cum += rest;
+    if (cum >= 0.95 - 1e-12) {
+      p95 = k;
+      break;
+    }
+  }
+  return { mean, solveRate, p95 };
 }
 
 /** Layout of the spring vector. */

@@ -165,7 +165,7 @@ mod tests {
             p_chosen: 0.123_456_79,
             bits_expected: 5.87,
             phase: if guess == 3 { 255 } else { 0 },
-            is_candidate: guess % 2 == 0,
+            is_candidate: guess & 1 == 0,
         };
         vec![
             Game { target: 12, replicate: 3, turns: vec![t(3, false), t(8, true)], solved: true, is_player: false },

@@ -12,6 +12,7 @@
 
 import type { FromWorker, MetaResult, ToWorker } from './protocol';
 import { PRIORITY_RANK } from './protocol';
+import { plain } from './stream';
 import type { Config, Priority, ProgressEvent, Scope, SummaryEvent } from './types';
 
 export interface WorkerLike {
@@ -162,7 +163,8 @@ export class WorkerPool {
   }
 
   /** Load a word list in every worker (builds the pattern matrix). Resolves with the slowest matrix time. */
-  async load(payload: LoadPayload, nAnswers?: number): Promise<number> {
+  async load(payloadIn: LoadPayload, nAnswers?: number): Promise<number> {
+    const payload = plain(payloadIn);
     this.ensureWorkers();
     this.lastLoad = payload;
     if (nAnswers !== undefined) this.answerCounts.set(payload.key, nAnswers);
@@ -315,7 +317,9 @@ export class WorkerPool {
   }
 
   /** Start a run. */
-  start(key: string, config: Config, scope: Scope, priority: Priority, handlers: JobHandlers, deterministic: boolean): Job {
+  start(key: string, configIn: Config, scopeIn: Scope, priority: Priority, handlers: JobHandlers, deterministic: boolean): Job {
+    const config = plain(configIn);
+    const scope = plain(scopeIn);
     this.ensureWorkers();
     if (this.lastLoad && this.lastLoad.key === key) {
       for (const s of this.slots) if (!s.dead && !s.loaded.has(key) && !s.loading.has(key)) void this.loadSlot(s, this.lastLoad).catch(() => {});
@@ -443,7 +447,12 @@ export class WorkerPool {
     const reqId = this.nextId++;
     return new Promise<T>((resolve, reject) => {
       this.requests.set(reqId, { resolve: resolve as (v: unknown) => void, reject, slot: best });
-      best.worker.postMessage(build(reqId), transfer);
+      try {
+        best.worker.postMessage(plain(build(reqId)), transfer);
+      } catch (e) {
+        this.requests.delete(reqId);
+        reject(e instanceof Error ? e : new Error(String(e)));
+      }
     });
   }
 

@@ -160,3 +160,14 @@ export async function until(cond: () => boolean, ms = 5000): Promise<void> {
     await new Promise((r) => setTimeout(r, 1));
   }
 }
+
+/** The parts of node:fs the tests use (typed here: the project does not depend on @types/node). */
+export interface TestFs {
+  readFileSync(path: URL | string): Uint8Array;
+  readFileSync(path: URL | string, encoding: 'utf8'): string;
+  existsSync(path: URL | string): boolean;
+  readdirSync(path: URL | string): string[];
+}
+
+/** node:fs in tests (vitest runs under Node). */
+export const fs: TestFs = (globalThis as unknown as { process: { getBuiltinModule(name: string): TestFs } }).process.getBuiltinModule('node:fs');

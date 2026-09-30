@@ -10,7 +10,7 @@
 use wl_core::{observed_info, AnswerIdx, Pattern, WordList, SOLVER_VERSION};
 use wl_strategy::StrategySpec;
 
-use crate::card::{pair_rows, CardAccumulator, RankMetric};
+use crate::card::{pair_rows, CardAccumulator, RankEntry, RankMetric};
 use crate::config::{strategy_canonical_json, AnswerSelection, Config, Weighting};
 use crate::game::Game;
 use crate::trie::TargetTrie;
@@ -284,7 +284,7 @@ pub fn configs_csv(configs: &[ExportConfig], opts: &ExportOptions) -> String {
     t.finish()
 }
 
-pub fn games_csv<'g>(list: &WordList, rows: &[(&ExportConfig, Vec<&'g Game>)]) -> String {
+pub fn games_csv(list: &WordList, rows: &[(&ExportConfig, Vec<&Game>)]) -> String {
     let mut t =
         Table::new(&["game_id", "config_id", "target", "replicate", "n_guesses", "solved", "outcome", "path", "is_player"]);
     for (c, games) in rows {
@@ -305,7 +305,7 @@ pub fn games_csv<'g>(list: &WordList, rows: &[(&ExportConfig, Vec<&'g Game>)]) -
     t.finish()
 }
 
-pub fn plays_csv<'g>(list: &WordList, rows: &[(&ExportConfig, Vec<&'g Game>)], filter: Option<&dyn RowFilter>) -> String {
+pub fn plays_csv(list: &WordList, rows: &[(&ExportConfig, Vec<&Game>)], filter: Option<&dyn RowFilter>) -> String {
     let mut t = Table::new(&[
         "game_id",
         "config_id",
@@ -353,10 +353,10 @@ pub fn plays_csv<'g>(list: &WordList, rows: &[(&ExportConfig, Vec<&'g Game>)], f
 
 /// Nodes of one target tree per configuration, built from the games in
 /// export order (so node ids follow that order).
-pub fn nodes_csv<'g>(
+pub fn nodes_csv(
     list: &WordList,
     target: AnswerIdx,
-    rows: &[(&ExportConfig, Vec<&'g Game>)],
+    rows: &[(&ExportConfig, Vec<&Game>)],
     filter: Option<&dyn RowFilter>,
 ) -> String {
     let mut t = Table::new(&[
@@ -506,6 +506,32 @@ pub struct RankingRow {
     pub stage: String,
 }
 
+/// Ranking rows for ranked entries (see [`crate::card::rank_entries`]).
+pub fn ranking_rows(
+    ranking_id: &str,
+    fixed_kind: &str,
+    fixed_value: &str,
+    metric: RankMetric,
+    ranked: &[(u32, RankEntry)],
+) -> Vec<RankingRow> {
+    ranked
+        .iter()
+        .map(|(rank, e)| RankingRow {
+            ranking_id: ranking_id.into(),
+            fixed_kind: fixed_kind.into(),
+            fixed_value: fixed_value.into(),
+            entry: e.name.clone(),
+            rank: *rank,
+            metric,
+            value: e.value,
+            ci_low: e.ci_low,
+            ci_high: e.ci_high,
+            fail_rate: e.fail_rate,
+            stage: if e.full { "full" } else { "screened" }.into(),
+        })
+        .collect()
+}
+
 pub fn ranking_csv(rows: &[RankingRow]) -> String {
     let mut t = Table::new(&[
         "ranking_id",
@@ -622,7 +648,7 @@ mod tests {
             (123456.0, "123456"),
             (1234567.0, "1234570"),
             (123456.5, "123457"),
-            (-3.14159265, "-3.14159"),
+            (-1.23456789, "-1.23457"),
             (0.000123456789, "0.000123457"),
             (1.5e-7, "0.00000015"),
             (9.999996, "10"),
@@ -641,6 +667,17 @@ mod tests {
         // f32 values are written from their exact f64 widening.
         assert_eq!(fmt_num(0.1f32 as f64), "0.1");
         assert_eq!(fmt_num(1.0f32 as f64 / 3.0), "0.333333");
+    }
+
+    #[test]
+    fn ranking_table() {
+        let entries = vec![RankEntry { name: "crane".into(), value: 3.5, ci_low: 3.4, ci_high: 3.6, fail_rate: 0.004, full: true }];
+        let rows = ranking_rows("r1", "strategy", "max_info", RankMetric::Mean, &crate::card::rank_entries(entries, RankMetric::Mean));
+        assert_eq!(
+            ranking_csv(&rows),
+            "ranking_id,fixed_kind,fixed_value,entry,rank,metric,value,ci_low,ci_high,fail_rate,stage\n\
+             r1,strategy,max_info,crane,1,mean,3.5,3.4,3.6,0.004,full\n"
+        );
     }
 
     #[test]

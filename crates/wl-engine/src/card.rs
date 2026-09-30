@@ -324,6 +324,59 @@ impl RankMetric {
     }
 }
 
+/// One entry of a ranking panel: a strategy or an opener with its metric.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RankEntry {
+    pub name: String,
+    pub value: f64,
+    pub ci_low: f64,
+    pub ci_high: f64,
+    pub fail_rate: f64,
+    /// Fully evaluated (a card), or screened out with its screening score.
+    pub full: bool,
+}
+
+impl RankEntry {
+    /// A fully evaluated entry from its card.
+    pub fn from_card(name: &str, card: &Card, metric: RankMetric) -> RankEntry {
+        let (value, ci_low, ci_high) = metric.value(card);
+        let fail_rate = card.shares.last().copied().unwrap_or(f64::NAN);
+        RankEntry { name: name.to_string(), value, ci_low, ci_high, fail_rate, full: true }
+    }
+}
+
+impl RankMetric {
+    /// Whether lower values rank higher (all but the share solved in three or fewer).
+    pub fn lower_is_better(self) -> bool {
+        !matches!(self, RankMetric::Le3)
+    }
+}
+
+/// Rank entries (docs/specification.md, "Rankings"): full evaluations
+/// before screened ones; within each, best metric value first, ties broken
+/// on fail rate (lower first), then name. Missing values (NaN) go last.
+/// Returns the entries in rank order with ranks 1, 2, ….
+pub fn rank_entries(mut entries: Vec<RankEntry>, metric: RankMetric) -> Vec<(u32, RankEntry)> {
+    let key = |x: f64| {
+        if x.is_nan() {
+            f64::INFINITY
+        } else if metric.lower_is_better() {
+            x
+        } else {
+            -x
+        }
+    };
+    let fail = |x: f64| if x.is_nan() { f64::INFINITY } else { x };
+    entries.sort_by(|a, b| {
+        b.full
+            .cmp(&a.full)
+            .then_with(|| key(a.value).total_cmp(&key(b.value)))
+            .then_with(|| fail(a.fail_rate).total_cmp(&fail(b.fail_rate)))
+            .then_with(|| a.name.cmp(&b.name))
+    });
+    entries.into_iter().enumerate().map(|(i, e)| (i as u32 + 1, e)).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -402,6 +455,34 @@ mod tests {
         let half = Z95 * ((1.0 - 0.3) * s2 / 3.0).sqrt();
         assert!((c.bands[2].0 - (s - half)).abs() < 1e-12);
         assert!((c.bands[2].1 - (s + half).min(1.0)).abs() < 1e-12);
+    }
+
+    #[test]
+    fn ranking_order() {
+        let e = |name: &str, value: f64, fail_rate: f64, full: bool| RankEntry {
+            name: name.into(),
+            value,
+            ci_low: value,
+            ci_high: value,
+            fail_rate,
+            full,
+        };
+        let ranked = rank_entries(
+            vec![
+                e("slate", 3.6, 0.01, true),
+                e("crane", 3.5, 0.02, true),
+                e("trace", 3.5, 0.01, true),
+                e("adieu", 3.1, 0.0, false),
+                e("zzzzz", f64::NAN, f64::NAN, true),
+                e("audio", 3.5, 0.01, true),
+            ],
+            RankMetric::Mean,
+        );
+        let names: Vec<(u32, &str)> = ranked.iter().map(|(r, e)| (*r, e.name.as_str())).collect();
+        assert_eq!(names, vec![(1, "audio"), (2, "trace"), (3, "crane"), (4, "slate"), (5, "zzzzz"), (6, "adieu")]);
+        // Higher is better for the share solved in three or fewer.
+        let ranked = rank_entries(vec![e("a", 0.4, 0.0, true), e("b", 0.5, 0.0, true)], RankMetric::Le3);
+        assert_eq!(ranked[0].1.name, "b");
     }
 
     #[test]

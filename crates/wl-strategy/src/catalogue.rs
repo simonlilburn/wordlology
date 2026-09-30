@@ -39,7 +39,12 @@ fn max_info() -> Box<StrategySpec> {
 /// `BuildError::UnknownWord`).
 pub fn presets() -> Vec<Preset> {
     vec![
-        Preset { id: "info_proportional", label: "Info-proportional (β = 1)", colour: "#0072b2", spec: default_arrival() },
+        Preset {
+            id: "info_proportional",
+            label: "Info-proportional (β = 1)",
+            colour: "#0072b2",
+            spec: default_arrival(),
+        },
         Preset { id: "max_info", label: "Max information", colour: "#009e73", spec: *max_info() },
         Preset {
             id: "max_info_allowed",
@@ -54,7 +59,12 @@ pub fn presets() -> Vec<Preset> {
             colour: "#cc79a7",
             spec: StrategySpec::FixedSequence { words: words(&["slate", "crony", "build"]), solve_when_one: true },
         },
-        Preset { id: "random", label: "Random candidate", colour: "#8c8c8c", spec: StrategySpec::Random { pool: Pool::Candidates } },
+        Preset {
+            id: "random",
+            label: "Random candidate",
+            colour: "#8c8c8c",
+            spec: StrategySpec::Random { pool: Pool::Candidates },
+        },
         Preset {
             id: "freq_proportional",
             label: "Frequency-proportional (β = 1)",

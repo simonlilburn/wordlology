@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { fs } from './testing';
+const readFileSync = fs.readFileSync;
 import { describe, expect, it } from 'vitest';
 import type { WordListManifest } from '../backend/types';
 import { answersSha256, normaliseWords, sha256Hex } from './sha256';

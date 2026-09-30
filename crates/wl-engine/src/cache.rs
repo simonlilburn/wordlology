@@ -40,9 +40,10 @@ type KeyMap<V> = HashMap<StateKey, V, BuildHasherDefault<KeyHasher>>;
 
 /// Default bound on cached distributions.
 pub const DEFAULT_MAX_ENTRIES: usize = 100_000;
-/// Default bound on the total number of distribution entries held (about
-/// 16 bytes each, so 64 MB).
-pub const DEFAULT_MAX_WEIGHT: usize = 4_000_000;
+/// Default bound on the total number of distribution entries held (16 bytes
+/// each, so 32 MB). Phones may run four workers, each with its own cache and
+/// pattern matrix, within a 300 MB budget.
+pub const DEFAULT_MAX_WEIGHT: usize = 2_000_000;
 
 pub struct DistCache {
     current: KeyMap<Arc<Dist>>,

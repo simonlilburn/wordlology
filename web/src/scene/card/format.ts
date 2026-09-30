@@ -46,6 +46,11 @@ export function fmtMean(mean: number, se: number | null = null, provisional = fa
   return se !== null && Number.isFinite(se) ? `${m} ± ${fmtSe(se)}` : m;
 }
 
+/** A value known only as a lower bound: "≥ 3.12". */
+export function atLeast(text: string): string {
+  return text === '–' ? text : `≥ ${text.replace(/^~/, '')}`;
+}
+
 /** Standard error with enough digits to be non-zero (at most 3 decimals). */
 export function fmtSe(se: number): string {
   if (se >= 0.005 || se === 0) return se.toFixed(2);

@@ -113,7 +113,10 @@ fn most_frequent_picks_by_zipf_with_ties_to_lower_id() {
 
     // No frequencies, no strategy.
     let bare = adhoc(&["crane", "slate"], &["crane"]);
-    assert_eq!(spec(r#"{"kind":"most_frequent"}"#).build(&bare).err(), Some(BuildError::NeedsFrequencies("most_frequent")));
+    assert_eq!(
+        spec(r#"{"kind":"most_frequent"}"#).build(&bare).err(),
+        Some(BuildError::NeedsFrequencies("most_frequent"))
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -235,15 +238,11 @@ fn large_beta_approaches_deterministic_counterpart() {
     let list = reference();
     let m = matrix(&list);
     let ctx = Ctx::new(&list, &m, rules(false));
-    let states = [
-        State::initial(&list),
-        state_after(&ctx, "brand", &["slate"]),
-        state_after(&ctx, "older", &["saint"]),
-    ];
-    for (prop, det) in [
-        ("info_proportional", r#"{"kind":"max_info"}"#),
-        ("freq_proportional", r#"{"kind":"most_frequent"}"#),
-    ] {
+    let states =
+        [State::initial(&list), state_after(&ctx, "brand", &["slate"]), state_after(&ctx, "older", &["saint"])];
+    for (prop, det) in
+        [("info_proportional", r#"{"kind":"max_info"}"#), ("freq_proportional", r#"{"kind":"most_frequent"}"#)]
+    {
         let det = build(det, &list);
         for st in &states {
             let want = det.distribution(&ctx, st).entries[0].word;
@@ -291,10 +290,7 @@ fn freq_proportional_follows_frequency() {
 
 /// Letter frequencies over the candidates: a 3, b 2, the rest 1.
 fn coverage_list() -> wl_core::WordList {
-    adhoc(
-        &["aabcd", "abcde", "abfgh", "abfgi", "abxyz", "aijkl", "cdfgh", "mnopq"],
-        &["abcde", "abfgh", "aijkl"],
-    )
+    adhoc(&["aabcd", "abcde", "abfgh", "abfgi", "abxyz", "aijkl", "cdfgh", "mnopq"], &["abcde", "abfgh", "aijkl"])
 }
 
 #[test]
@@ -302,7 +298,8 @@ fn coverage_picks_frequent_untested_letters() {
     let list = coverage_list();
     let m = matrix(&list);
     let ctx = Ctx::new(&list, &m, rules(false));
-    let s = build(r#"{"kind":"coverage_then","switch":{"when":"after_turns","k":6},"then":{"kind":"max_info"}}"#, &list);
+    let s =
+        build(r#"{"kind":"coverage_then","switch":{"when":"after_turns","k":6},"then":{"kind":"max_info"}}"#, &list);
     assert!(s.is_deterministic());
     assert_eq!(s.phases(), ["coverage", "max_info"]);
     let root = State::initial(&list);
@@ -330,7 +327,8 @@ fn coverage_then_switches_after_k_turns() {
     let list = reference();
     let m = matrix(&list);
     let ctx = Ctx::new(&list, &m, rules(false));
-    let s = build(r#"{"kind":"coverage_then","switch":{"when":"after_turns","k":2},"then":{"kind":"max_info"}}"#, &list);
+    let s =
+        build(r#"{"kind":"coverage_then","switch":{"when":"after_turns","k":2},"then":{"kind":"max_info"}}"#, &list);
     let then = build(r#"{"kind":"max_info"}"#, &list);
     let mut r = rng(3);
     for t in sample_targets(&list, 60, &mut r) {
@@ -368,7 +366,8 @@ fn switch_rules() {
         (r#"{"when":"after_turns","k":1}"#, |s| s.turn >= 1),
     ];
     for (rule, switched) in cases {
-        let json = format!(r#"{{"kind":"switch","first":{{"kind":"random"}},"then":{{"kind":"max_info"}},"when":{rule}}}"#);
+        let json =
+            format!(r#"{{"kind":"switch","first":{{"kind":"random"}},"then":{{"kind":"max_info"}},"when":{rule}}}"#);
         let s = build(&json, &list);
         assert!(!s.is_deterministic());
         assert_eq!(s.phases(), ["random", "max_info"]);
@@ -428,10 +427,8 @@ fn epsilon_greedy_mixture() {
     let list = reference();
     let m = matrix(&list);
     let ctx = Ctx::new(&list, &m, rules(false));
-    let s = build(
-        r#"{"kind":"mixture","weights":[0.9,0.1],"strategies":[{"kind":"max_info"},{"kind":"random"}]}"#,
-        &list,
-    );
+    let s =
+        build(r#"{"kind":"mixture","weights":[0.9,0.1],"strategies":[{"kind":"max_info"},{"kind":"random"}]}"#, &list);
     assert!(!s.is_deterministic());
     assert_eq!(s.phases(), ["max_info", "random"]);
     let root = State::initial(&list);
@@ -458,10 +455,8 @@ fn epsilon_greedy_mixture() {
     }
     assert!(phases[1] > 120 && phases[1] < 290, "{phases:?}");
     // Weights are normalised; a zero-weight part is never consulted.
-    let det = build(
-        r#"{"kind":"mixture","weights":[0,3],"strategies":[{"kind":"random"},{"kind":"max_info"}]}"#,
-        &list,
-    );
+    let det =
+        build(r#"{"kind":"mixture","weights":[0,3],"strategies":[{"kind":"random"},{"kind":"max_info"}]}"#, &list);
     assert!(det.is_deterministic());
     let d = det.distribution(&ctx, &root);
     assert_eq!(d.entries.len(), 1);
@@ -547,7 +542,9 @@ fn determinism_of_combinations() {
     let list = reference();
     let det = r#"{"kind":"max_info"}"#;
     let sto = r#"{"kind":"random"}"#;
-    let sw = |a: &str, b: &str| format!(r#"{{"kind":"switch","first":{a},"then":{b},"when":{{"when":"candidates_le","n":3}}}}"#);
+    let sw = |a: &str, b: &str| {
+        format!(r#"{{"kind":"switch","first":{a},"then":{b},"when":{{"when":"candidates_le","n":3}}}}"#)
+    };
     assert!(build(&sw(det, det), &list).is_deterministic());
     assert!(!build(&sw(det, sto), &list).is_deterministic());
     assert!(!build(&sw(sto, det), &list).is_deterministic());
@@ -558,8 +555,11 @@ fn determinism_of_combinations() {
     let solve = |inner: &str| format!(r#"{{"kind":"solve_when_le","n":2,"inner":{inner}}}"#);
     assert!(build(&solve(det), &list).is_deterministic());
     assert!(!build(&solve(sto), &list).is_deterministic());
-    assert!(build(r#"{"kind":"coverage_then","switch":{"when":"after_turns","k":1},"then":{"kind":"most_frequent"}}"#, &list)
-        .is_deterministic());
+    assert!(build(
+        r#"{"kind":"coverage_then","switch":{"when":"after_turns","k":1},"then":{"kind":"most_frequent"}}"#,
+        &list
+    )
+    .is_deterministic());
     assert!(!build(
         r#"{"kind":"sequence_then","words":["slate"],"switch":{"when":"sequence_exhausted"},"then":{"kind":"info_proportional"}}"#,
         &list

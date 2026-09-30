@@ -93,7 +93,7 @@ fn single_target_follows_one_path() {
     let e = reference();
     let c = config(&e, max_info(Pool::Allowed), Some("slate"), 1);
     let prep = prepare(&e, &c);
-    let t = e.list.answer_of_word("house").or(Some(17)).unwrap();
+    let t = e.list.answer_of_word("house").unwrap_or(17);
     let mut run = Run::new(e.clone(), prep, &Scope::targets(vec![t])).unwrap();
     let mut games = Vec::new();
     let mut units = 0;

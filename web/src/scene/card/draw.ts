@@ -3,7 +3,7 @@
 
 import { CARD_H, CARD_W, type Lod } from '../atlas/layout';
 import type { CardDisplay } from './display';
-import { fmtCount, fmtInt, fmtMean, fmtPercent, fmtQuantile, progressText, rowName } from './format';
+import { atLeast, fmtCount, fmtInt, fmtMean, fmtPercent, fmtQuantile, progressText, rowName } from './format';
 import { hexToRgb, mixOklab, rampPositions, rgbCss, rowFill, rowLabel, type CardTheme, type RGB } from './ramp';
 
 /** Face geometry in layout units (the card is CARD_W × CARD_H). */
@@ -293,14 +293,17 @@ function drawHeaderFooter(g: CanvasRenderingContext2D, d: CardDisplay, info: Fac
 
   // Footer: mean (± SE), solved, p95; progress text.
   const fy = FACE.rowsBottom + 22;
-  const mean = fmtMean(d.mean, d.deterministic ? null : d.meanSe, provisional);
+  const lb = d.lowerBound;
+  const mean = lb ? atLeast(fmtMean(d.mean)) : fmtMean(d.mean, d.deterministic ? null : d.meanSe, provisional);
   g.fillStyle = rgbCss(theme.ink);
   g.font = `650 14px ${o.sans}`;
   g.textAlign = 'left';
   g.fillText(`mean ${mean}`, P, fy);
   g.textAlign = 'right';
   g.font = `500 12.5px ${o.sans}`;
-  const solved = `${fmtPercent(d.solveRate, provisional)} solved · p95 ${fmtQuantile(d.p95, d.maxGuesses, provisional)}`;
+  const solvedText = lb ? atLeast(fmtPercent(d.solveRate)) : fmtPercent(d.solveRate, provisional);
+  const p95Text = lb ? atLeast(fmtQuantile(d.p95, d.maxGuesses)) : fmtQuantile(d.p95, d.maxGuesses, provisional);
+  const solved = `${solvedText} solved · p95 ${p95Text}`;
   g.fillText(solved, W - P, fy);
   g.textAlign = 'left';
   g.font = `400 10.5px ${o.sans}`;
@@ -321,6 +324,6 @@ function drawChipFooter(g: CanvasRenderingContext2D, d: CardDisplay, info: FaceI
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.font = `700 104px ${o.sans}`;
-  const text = Number.isFinite(d.mean) ? fmtMean(d.mean, null, provisional) : '…';
+  const text = !Number.isFinite(d.mean) ? '…' : d.lowerBound ? atLeast(fmtMean(d.mean, null, true)) : fmtMean(d.mean, null, provisional);
   g.fillText(fitText(g, text, CARD_W - 24), CARD_W / 2, CHIP.rowsBottom + (CARD_H - CHIP.rowsBottom) / 2 + 2);
 }

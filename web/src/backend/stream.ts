@@ -112,6 +112,16 @@ export function scopeRange(scope: Scope, replicates: number): [number, number] {
   return scope.replicates ? [scope.replicates[0], scope.replicates[1]] : [0, replicates];
 }
 
+/**
+ * A plain, structured-cloneable copy of a value (Svelte $state proxies cannot
+ * be posted to workers). Typed arrays and ArrayBuffers are kept as they are.
+ */
+export function plain<T>(v: T): T {
+  if (v === null || typeof v !== 'object') return v;
+  if (ArrayBuffer.isView(v) || v instanceof ArrayBuffer) return v;
+  return JSON.parse(JSON.stringify(v)) as T;
+}
+
 /** FNV-1a 32-bit hash as 8 hex digits (for compact keys of long lists). */
 export function fnv1a(text: string): string {
   let h = 0x811c9dc5;
