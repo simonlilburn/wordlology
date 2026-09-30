@@ -220,7 +220,13 @@ impl PatternMatrix {
                 }
             })
             .collect();
-        PatternMatrix { n_guesses: list.n_guesses(), n_answers: list.n_answers(), word_len: list.word_len(), data, nlogn }
+        PatternMatrix {
+            n_guesses: list.n_guesses(),
+            n_answers: list.n_answers(),
+            word_len: list.word_len(),
+            data,
+            nlogn,
+        }
     }
 
     /// Fill rows `start..end` (each cell is [`crate::feedback`] of the guess
