@@ -56,6 +56,14 @@ export class SpringArray {
       }
     }
   }
+  /** Jump the springs at `indices` to their targets. */
+  snap(indices: Iterable<number>): void {
+    for (const i of indices) {
+      if (i < 0 || i >= this.x.length) continue;
+      this.x[i] = this.target[i];
+      this.v[i] = 0;
+    }
+  }
   /** Step every spring; returns true while any is still moving visibly. */
   step(dt: number, epsilon = 1e-4): boolean {
     let moving = false;

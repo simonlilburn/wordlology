@@ -150,6 +150,23 @@ export function topDownBounds(
   return { mean, solveRate, p95 };
 }
 
+/**
+ * Spring indices to jump rather than ease when a card gets its first data:
+ * easing from an empty card would show numbers that were never estimates
+ * ("mean ~0.2"). A deterministic card still drains its hatched band.
+ */
+export function firstDataSnap(n: number, deterministic: boolean): number[] {
+  const all = Array.from({ length: vectorLength(n) }, (_, i) => i);
+  if (!deterministic) return all;
+  const band = new Set([4 * n + 3, 4 * n + 4]);
+  return all.filter((i) => !band.has(i));
+}
+
+/** Whether a display holds any data yet. */
+export function hasData(d: CardDisplay): boolean {
+  return d.nGames > 0;
+}
+
 /** Layout of the spring vector. */
 export function vectorLength(n: number): number {
   return 4 * n + 6;

@@ -28,6 +28,8 @@ export interface StackFrame {
   paperAlpha: number;
   faceAlpha: number;
   ghostAlpha: number;
+  /** Row shading and bars rising from paper to their full ink. */
+  shadeRise: number;
   frameAlpha: number;
   /** Whether the perspective camera is needed this frame. */
   persp: boolean;
@@ -50,6 +52,7 @@ export function stackFrame(u: number): StackFrame {
     paperAlpha: smoothstep(0.42, 0.86, x),
     faceAlpha: smoothstep(0.55, 0.96, x),
     ghostAlpha: smoothstep(0.6, 0.95, x),
+    shadeRise: smoothstep(0.62, 1.0, x),
     frameAlpha: smoothstep(0.74, 1.0, x),
     persp,
   };

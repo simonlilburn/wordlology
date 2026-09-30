@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CardSnapshot } from '../../model/types';
-import { displayFromSnapshot, drawKey, emptyDisplay, medianTarget, packDisplay, unpackDisplay, vectorLength } from './display';
+import { displayFromSnapshot, drawKey, emptyDisplay, firstDataSnap, medianTarget, packDisplay, unpackDisplay, vectorLength } from './display';
 
 function snap(over: Partial<CardSnapshot>): CardSnapshot {
   return {
@@ -104,5 +104,21 @@ describe('drawKey', () => {
     const moved = { ...base, shares: base.shares.map((x, i) => (i === 2 ? x + 0.01 : x)) };
     expect(drawKey(moved, 'chip')).not.toBe(drawKey(base, 'chip'));
     expect(drawKey(base, 'chip')).not.toBe(drawKey(base, 'full'));
+  });
+});
+
+describe('firstDataSnap', () => {
+  it('snaps everything for a stochastic card, all but the band for a deterministic one', () => {
+    const n = 7;
+    expect(firstDataSnap(n, false)).toHaveLength(vectorLength(n));
+    const det = firstDataSnap(n, true);
+    expect(det).toHaveLength(vectorLength(n) - 2);
+    expect(det).not.toContain(4 * n + 3);
+    expect(det).not.toContain(4 * n + 4);
+    // The indices really are the band's: unresolvedFrac and bandTop.
+    const d = { ...emptyDisplay(6, true), unresolvedFrac: 0.25, bandTop: 3 };
+    const v = packDisplay(d);
+    expect(v[4 * n + 3]).toBe(0.25);
+    expect(v[4 * n + 4]).toBe(3);
   });
 });

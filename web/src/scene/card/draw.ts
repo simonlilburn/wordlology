@@ -41,6 +41,10 @@ export interface DrawOptions {
   flash: number;
   /** Selected for compare. */
   selected: boolean;
+  /** 0..1: row shading and bars rising in (the Tree → Card transition); 1 normally. */
+  rise?: number;
+  /** 0..1: opacity of the card's frame (border); 1 normally. */
+  frame?: number;
   /** Font family stacks. */
   sans: string;
   mono: string;
@@ -98,8 +102,12 @@ export function drawFace(g: CanvasRenderingContext2D, k: number, d: CardDisplay,
   const [top, bottom] = rowsRegion(o.lod);
   const n = d.n;
   const rowH = (bottom - top) / n;
-  const ramp = rampPositions(d.shares);
+  const rise = Math.max(0, Math.min(1, o.rise ?? 1));
+  const ramp = rampPositions(d.shares).map((t) => t * rise);
   const bandTopY = top + Math.min(n, Math.max(0, d.bandTop)) * rowH;
+  // Deterministic runs: unresolved games in a hatched band below the settled
+  // rows. It follows the eased values, so on completion it drains away.
+  const banded = d.deterministic && d.unresolvedFrac > 0.0005 && bandTopY < bottom - 0.5;
 
   // Row shading (transparent → full ink for the largest row).
   for (let i = 0; i < n; i++) {
@@ -113,8 +121,7 @@ export function drawFace(g: CanvasRenderingContext2D, k: number, d: CardDisplay,
   g.fillStyle = rgbCss(theme.rule);
   for (let i = 0; i <= n; i++) g.fillRect(0, top + i * rowH - 0.35, W, 0.7);
 
-  // Deterministic runs: unresolved games in a hatched band below the settled rows.
-  if (d.deterministic && !d.complete && d.unresolvedFrac > 0.0005 && bandTopY < bottom - 0.5) {
+  if (banded) {
     g.save();
     g.beginPath();
     g.rect(0, bandTopY, W, bottom - bandTopY);
@@ -134,7 +141,7 @@ export function drawFace(g: CanvasRenderingContext2D, k: number, d: CardDisplay,
     g.fillStyle = rgbCss(theme.ink);
     g.fillRect(0, bandTopY - 0.6, W, 1.2);
     if (o.lod === 'full' && bottom - bandTopY > 16) {
-      const label = `${fmtInt(d.unresolved)} unresolved`;
+      const label = `${fmtInt(d.complete ? d.unresolvedFrac * d.nTargets : d.unresolved)} unresolved`;
       g.font = `600 12px ${o.sans}`;
       const tw = g.measureText(label).width;
       const cx = (FACE.plotLeft + FACE.plotRight) / 2;
@@ -152,8 +159,8 @@ export function drawFace(g: CanvasRenderingContext2D, k: number, d: CardDisplay,
     }
   }
 
-  if (o.lod === 'full') drawFullRows(g, d, o, top, rowH, ramp, provisional, bandTopY);
-  else drawChipRows(g, d, o, top, rowH, ramp);
+  if (o.lod === 'full') drawFullRows(g, d, o, top, rowH, ramp, provisional, banded ? bandTopY : Infinity);
+  else drawChipRows(g, d, o, top, rowH, ramp, banded ? d.bandTop : Infinity);
 
   if (o.lod === 'full') drawHeaderFooter(g, d, info, o, provisional);
   else drawChipFooter(g, d, info, o, provisional);
@@ -174,7 +181,7 @@ export function drawFace(g: CanvasRenderingContext2D, k: number, d: CardDisplay,
   roundRect(g, inset, inset, W - 2 * inset, H - 2 * inset, FACE.radius);
   const base: RGB = o.selected ? theme.accent : theme.rule;
   const col = o.flash > 0 ? mixOklab(base, theme.accent, o.flash) : base;
-  g.strokeStyle = rgbCss(col);
+  g.strokeStyle = rgbCss(col, Math.max(0, Math.min(1, o.frame ?? 1)));
   g.lineWidth = o.selected ? 4 : 1.5 + 2.5 * o.flash;
   g.stroke();
   if (info.error && o.lod !== 'micro') {
@@ -200,7 +207,7 @@ function drawFullRows(
   const plotW = FACE.plotRight - FACE.plotLeft;
   for (let i = 0; i < d.n; i++) {
     const y = top + i * rowH;
-    if (d.deterministic && !d.complete && y >= bandTopY - 0.5) {
+    if (y >= bandTopY - 0.5) {
       // Hidden by the unresolved band; still name the row.
       g.fillStyle = rgbCss(theme.muted);
       g.font = `500 11px ${o.sans}`;
@@ -239,18 +246,18 @@ function drawFullRows(
     g.font = `650 14px ${o.sans}`;
     g.fillText(fmtPercent(d.shares[i], rowProvisional), CARD_W - FACE.pad, cy - 6);
     g.font = `400 10.5px ${o.sans}`;
-    g.fillStyle = rgbCss(lab, 0.86);
+    g.fillStyle = rgbCss(lab); // full strength: labels on shaded rows keep WCAG AA contrast
     g.fillText(fmtCount(d.counts[i], rowProvisional), CARD_W - FACE.pad, cy + 9);
   }
 }
 
-function drawChipRows(g: CanvasRenderingContext2D, d: CardDisplay, o: DrawOptions, top: number, rowH: number, ramp: number[]): void {
+function drawChipRows(g: CanvasRenderingContext2D, d: CardDisplay, o: DrawOptions, top: number, rowH: number, ramp: number[], bandTop: number): void {
   // Chips keep only the shaded rows (and the bars, which stay legible when small).
   if (o.lod !== 'chip' || !o.rowBars) return;
   const { theme } = o;
   const x0 = 24, w = CARD_W - 48;
   for (let i = 0; i < d.n; i++) {
-    if (d.deterministic && !d.complete && i >= d.bandTop - 0.01) continue;
+    if (i >= bandTop - 0.01) continue;
     const bw = Math.max(0, Math.min(1, d.shares[i])) * w;
     if (bw < 0.5) continue;
     g.fillStyle = rgbCss(rowLabel(theme, ramp[i]), 0.85);

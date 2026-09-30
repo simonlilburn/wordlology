@@ -74,11 +74,14 @@ export function createCardLayer(): SceneLayer {
           dt: f.dt,
           lod,
           devicePx: screenH * d.dpr,
-          ghost: lod === 'full' && d.ghostAlpha > 0.01,
+          // Accumulate from the start of Tree → Card, so the ghost is ready when it fades in.
+          ghost: true,
           fps: 60,
           reduced: d.reduced,
           selected,
           priority: true,
+          rise: d.stack && !d.reduced ? d.stack.shadeRise : 1,
+          frame: d.stack && !d.reduced ? d.stack.frameAlpha : 1,
         })
       )
         animating = true;

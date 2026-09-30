@@ -487,4 +487,9 @@
   .note {
     color: var(--muted);
   }
+  @media (pointer: coarse) {
+    .open button {
+      min-height: 44px;
+    }
+  }
 </style>

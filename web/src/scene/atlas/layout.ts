@@ -98,14 +98,15 @@ export const COMPACT_VIEWPORT = 600;
 
 /**
  * The Card view of one cell: the card large, with the right and lower
- * neighbours (or the dashed "+ Strategy" / "+ Opener" cards) peeking in, and
- * room below for the toolbar. Narrow viewports peek less, so the card stays
- * legible on a phone.
+ * neighbours (or the dashed "+ Strategy" / "+ Opener" cards) peeking in.
+ * Narrow viewports peek less (and keep room below for the toolbar), so the
+ * card stays legible on a phone.
  */
 export function cardView(r: Rect, vp: Viewport, maxScale = 2.4): View {
   const compact = vp.width < COMPACT_VIEWPORT;
   const region = cardRegion(r, compact);
-  const reserve = Math.min(CARD_TOOLBAR_H, vp.height * 0.15);
+  // The toolbar overlaps the lower peek on wide screens; phones have no lower peek, so keep it clear.
+  const reserve = compact ? Math.min(CARD_TOOLBAR_H, vp.height * 0.15) : 0;
   const h = Math.max(40, vp.height - reserve);
   const scale = Math.max(0.05, Math.min(maxScale, (vp.width * 0.96) / region.w, (h * 0.96) / region.h));
   // Centre the region in the viewport above the toolbar reserve.

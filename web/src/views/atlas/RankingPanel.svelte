@@ -487,7 +487,7 @@
   }
   .more button {
     width: 100%;
-    min-height: 40px;
+    min-height: 44px;
     border: 1px dashed var(--line);
     border-radius: 8px;
     background: transparent;
@@ -559,5 +559,10 @@
     padding: 8px 14px 14px;
     margin: 0;
     color: var(--muted);
+  }
+  @media (pointer: coarse) {
+    .actions button {
+      min-height: 44px;
+    }
   }
 </style>

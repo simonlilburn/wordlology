@@ -178,12 +178,13 @@
   }
 
   function menuAct(fn: () => void): void {
-    headerMenu = null;
+    // Act before closing: the items read the menu's index.
     try {
       fn();
     } catch (err) {
       console.warn('[atlas menu]', err);
     }
+    headerMenu = null;
   }
 
   function menuKey(e: KeyboardEvent): void {
@@ -681,7 +682,7 @@
     background: transparent;
     color: inherit;
     padding: 0 12px;
-    min-height: 40px;
+    min-height: 44px;
     border-radius: 6px;
     cursor: pointer;
   }

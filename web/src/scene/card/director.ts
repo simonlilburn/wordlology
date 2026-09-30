@@ -102,7 +102,7 @@ class Director {
     // A side panel (compare) at the left: the view slides over to stay beside it.
     const wantInset = f.z > 1 && this.vp.width - cardUi.insetLeft >= 360 ? Math.max(0, cardUi.insetLeft) : 0;
     const I = this.inset;
-    if (this.reduced) {
+    if (this.reduced || f.z <= 1) {
       I.x = wantInset;
       I.v = 0;
     } else {

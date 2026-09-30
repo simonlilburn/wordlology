@@ -105,14 +105,15 @@
   }
 
   function act(fn: () => void): void {
-    const m = menuCell;
-    closeMenu();
-    if (!m) return;
-    try {
-      fn();
-    } catch (e) {
-      console.warn('[card menu]', e);
+    // Act before closing: the items read the menu's cell.
+    if (menuCell) {
+      try {
+        fn();
+      } catch (e) {
+        console.warn('[card menu]', e);
+      }
     }
+    closeMenu();
   }
 
   const menuStyle = $derived.by(() => {
@@ -421,7 +422,7 @@
     background: transparent;
     color: inherit;
     padding: 0 12px;
-    min-height: 40px;
+    min-height: 44px;
     border-radius: 6px;
     cursor: pointer;
   }

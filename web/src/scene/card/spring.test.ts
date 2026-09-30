@@ -65,3 +65,17 @@ describe('SpringArray', () => {
     expect(s.step(0.016)).toBe(false);
   });
 });
+
+describe('SpringArray.snap', () => {
+  it('jumps chosen springs to their targets and leaves the rest easing', () => {
+    const a = new SpringArray(3);
+    a.set([1, 2, 3]);
+    a.snap([0, 2]);
+    expect(a.x[0]).toBe(1);
+    expect(a.x[1]).toBe(0);
+    expect(a.x[2]).toBe(3);
+    expect(a.step(0.016)).toBe(true);
+    expect(a.x[0]).toBe(1);
+    expect(a.x[1]).toBeGreaterThan(0);
+  });
+});

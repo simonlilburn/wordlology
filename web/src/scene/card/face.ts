@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { app } from '../../app/store.svelte';
 import type { Cell } from '../atlas/cells';
 import { CARD_H, CARD_W, resolutionBucket, type Lod } from '../atlas/layout';
-import { drawKey, packDisplay, unpackDisplay, vectorLength, type CardDisplay } from './display';
+import { drawKey, firstDataSnap, hasData, packDisplay, unpackDisplay, vectorLength, type CardDisplay } from './display';
 import { drawFace, FACE, type FaceInfo } from './draw';
 import { DensityGrid, pathXs } from './ghost';
 import { cardTheme, prefersDark, type CardTheme } from './ramp';
@@ -65,6 +65,9 @@ export interface FaceRequest {
   selected: boolean;
   /** Draw regardless of the shared per-frame budget (the focused card). */
   priority?: boolean;
+  /** Tree → Card: row shading rising (0..1) and the frame appearing (0..1); default 1. */
+  rise?: number;
+  frame?: number;
 }
 
 export class CardFace {
@@ -92,6 +95,8 @@ export class CardFace {
   private theme: CardTheme;
   private snapNext = true;
   private selected = false;
+  private rise = 1;
+  private frame = 1;
   private drawnKey = '';
   lastUsed = 0;
   /** Current eased display (for DOM overlays that mirror a card). */
@@ -158,8 +163,10 @@ export class CardFace {
         this.grid = new DensityGrid(GHOST_COLS, GHOST_ROWS_PX, d.n);
         this.resetGhost();
       }
+      const first = !hasData(this.latest) && hasData(d);
       this.latest = d;
       this.springs.set(packDisplay(d), this.snapNext || req.reduced);
+      if (first) this.springs.snap(firstDataSnap(d.n, d.deterministic));
       this.snapNext = false;
       this.dirty = true;
     }
@@ -179,6 +186,14 @@ export class CardFace {
     }
     if (req.selected !== this.selected) {
       this.selected = req.selected;
+      this.dirty = true;
+    }
+    // Quantised so a transition redraws the face a few dozen times, not every frame.
+    const rise = Math.round(Math.max(0, Math.min(1, req.rise ?? 1)) * 24) / 24;
+    const frame = Math.round(Math.max(0, Math.min(1, req.frame ?? 1)) * 12) / 12;
+    if (rise !== this.rise || frame !== this.frame) {
+      this.rise = rise;
+      this.frame = frame;
       this.dirty = true;
     }
     const info = this.info();
@@ -208,7 +223,7 @@ export class CardFace {
       if (req.now - this.lastDraw < minGap) animating = true;
       else {
         const shown = unpackDisplay(this.springs.x, this.latest);
-        const key = `${drawKey(shown, this.lod)}|${Math.round(flash * 24)}|${this.selected}|${this.theme.dark}|${this.canvas.height}|${this.lastInfo}`;
+        const key = `${drawKey(shown, this.lod)}|${Math.round(flash * 24)}|${this.selected}|${this.rise}|${this.frame}|${this.theme.dark}|${this.canvas.height}|${this.lastInfo}`;
         if (key === this.drawnKey) {
           // Nothing visible changed (a spring settling, a sub-pixel move).
           this.shown = shown;
@@ -253,6 +268,8 @@ export class CardFace {
         rowBars: app.display.rowBars,
         flash,
         selected: this.selected,
+        rise: this.rise,
+        frame: this.frame,
         sans: SANS,
         mono: MONO,
       });
@@ -354,3 +371,8 @@ class FaceRegistry {
 }
 
 export const faces = new FaceRegistry();
+
+// Dev builds: a read-only handle for end-to-end checks of card faces.
+if (import.meta.env?.DEV && typeof window !== 'undefined') {
+  (window as unknown as { __wordlologyFaces?: FaceRegistry }).__wordlologyFaces = faces;
+}
