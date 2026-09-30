@@ -57,10 +57,15 @@ export function fitCamera(b: Bounds, vp: Viewport): CamState {
   return { cx: 0, cy, s };
 }
 
-/** The arrival camera: scale 1 (or the fit scale if smaller vertically), trunk centred, header at the top. */
-export function homeCamera(b: Bounds, vp: Viewport): CamState {
+/**
+ * The arrival camera: trunk centred, header at the top, scale 1 or smaller
+ * to fit the tree's height, but not below `minScale` (on a short phone
+ * viewport the lower rows then start below the fold rather than every label
+ * shrinking into a tick).
+ */
+export function homeCamera(b: Bounds, vp: Viewport, minScale = 0.8): CamState {
   const h = Math.max(1, b.top - b.bottom);
-  const s = Math.max(0.02, Math.min(1, (vp.height - 2 * FIT_MARGIN) / h));
+  const s = Math.max(0.02, Math.min(1, Math.max(minScale, (vp.height - 2 * FIT_MARGIN) / h)));
   return { cx: 0, cy: b.top - (vp.height / 2 - FIT_MARGIN) / s, s };
 }
 
@@ -101,4 +106,46 @@ export function approach(c: CamState, t: CamState, dtMs: number, tauMs = 110): b
 export function layoutScale(s: number): number {
   if (!(s > 1)) return 1;
   return Math.min(MAX_SCALE, Math.pow(2, Math.floor(Math.log2(s) * 2 + 1e-6) / 2));
+}
+
+/** How far panes cover each edge of the canvas (CSS px). */
+export interface Occlusion {
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+export function occlusionOf(vp: Viewport, width: number, height: number): Occlusion {
+  return { top: vp.top, right: Math.max(0, width - vp.left - vp.width), bottom: Math.max(0, height - vp.top - vp.height) };
+}
+
+/**
+ * The viewport the tree lays itself out in. Between the Game and the Tree the
+ * panes that cover the tree at the Tree level (the target strip, the side
+ * pane) are still arriving, so the larger of the current cover and the cover
+ * expected at the Tree level is used: the tiles fly to where the labels will
+ * stay instead of the tree jumping when the panes appear.
+ */
+export function expectedViewport(cur: Viewport, width: number, height: number, arrival: Occlusion | null): Viewport {
+  if (!arrival) return { ...cur };
+  const o = occlusionOf(cur, width, height);
+  const top = Math.max(o.top, Math.min(arrival.top, height * 0.5));
+  const right = Math.max(o.right, Math.min(arrival.right, width * 0.7));
+  const bottom = Math.max(o.bottom, Math.min(arrival.bottom, height * 0.8));
+  return { left: cur.left, top, width: Math.max(1, width - cur.left - right), height: Math.max(1, height - top - bottom) };
+}
+
+/** Ease a viewport toward a target (exponential, `tauMs`); returns true once it has arrived. */
+export function approachViewport(v: Viewport, t: Viewport, dtMs: number, tauMs = 90): boolean {
+  const k = 1 - Math.exp(-Math.max(0, dtMs) / tauMs);
+  let done = true;
+  for (const key of ['left', 'top', 'width', 'height'] as const) {
+    const d = t[key] - v[key];
+    if (Math.abs(d) < 0.5) v[key] = t[key];
+    else {
+      v[key] += d * k;
+      done = false;
+    }
+  }
+  return done;
 }

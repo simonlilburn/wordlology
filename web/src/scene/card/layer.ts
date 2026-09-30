@@ -78,6 +78,7 @@ export function createCardLayer(): SceneLayer {
           fps: 60,
           reduced: d.reduced,
           selected,
+          priority: true,
         })
       )
         animating = true;

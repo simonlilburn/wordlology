@@ -22,9 +22,13 @@ import {
 
 type Level = 'tree' | 'card' | 'atlas';
 
-/** Open the export dialog with E, download the zip and check its files against the specification. */
-async function exportAndCheck(page: Page, level: Level): Promise<{ fileName: string; files: Record<string, string> }> {
-  await page.keyboard.press('e');
+/** Open the export dialog (E by default), download the zip and check its files against the specification. */
+async function exportAndCheck(
+  page: Page,
+  level: Level,
+  open: () => Promise<void> = () => page.keyboard.press('e'),
+): Promise<{ fileName: string; files: Record<string, string> }> {
+  await open();
   const dialog = await topDialog(page, 'Export');
   const levels = dialog.getByRole('radiogroup', { name: 'Level to export' });
   await expect(levels.getByRole('radio', { name: level[0].toUpperCase() + level.slice(1) })).toHaveAttribute('aria-checked', 'true');
@@ -121,15 +125,30 @@ test('play → tree → card → atlas → export', async ({ page, context }) =>
   await expect(page.locator('[data-key="c"]')).toHaveAttribute('aria-label', 'C, absent');
   await expect(page.locator('[data-key="s"]')).toHaveAttribute('aria-label', 'S');
 
-  // SLATE wins in two.
+  // SLATE wins in two. Record when the message shows and when the zoom out starts.
+  await page.evaluate(() => {
+    const w = window as unknown as { __e2eWin: { msg: number; zoom: number } };
+    w.__e2eWin = { msg: -1, zoom: -1 };
+    const app = window.__wordlology!.app;
+    const tick = (now: number) => {
+      if (w.__e2eWin.msg < 0 && app.game.message.includes('Solved')) w.__e2eWin.msg = now;
+      if (w.__e2eWin.zoom < 0 && app.zTarget === 1) w.__e2eWin.zoom = now;
+      if (w.__e2eWin.zoom < 0) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
   await playWord(page, TARGET);
   await expect(row(page, 1)).toHaveAttribute('aria-label', 'Guess 2: S, correct; L, correct; A, correct; T, correct; E, correct');
   await expect(page.locator('section.game .message')).toHaveText('Brilliant! Solved in 2 guesses.');
   await expect(live).toHaveText('Brilliant! Solved in 2 guesses.');
   expect(await page.evaluate(() => window.__wordlology!.app.game.board!.status)).toBe('won');
 
-  // ---- Tree: after 800 ms the app zooms out by itself.
+  // ---- Tree: 800 ms after the end-of-game message the app zooms out by itself.
   await waitForLevel(page, 1);
+  const win = await page.evaluate(() => (window as unknown as { __e2eWin: { msg: number; zoom: number } }).__e2eWin);
+  expect(win.msg).toBeGreaterThan(0);
+  expect(win.zoom - win.msg).toBeGreaterThanOrEqual(700);
+  expect(win.zoom - win.msg).toBeLessThan(2500);
   await waitForTree(page);
   const tree = await page.evaluate(() => {
     const { app, focusData } = window.__wordlology!;
@@ -178,13 +197,18 @@ test('play → tree → card → atlas → export', async ({ page, context }) =>
   await expect(page.getByRole('toolbar', { name: 'Card and atlas tools' })).toBeVisible();
 
   // ---- Export at each level.
-  const atlas = await exportAndCheck(page, 'atlas');
+  // Atlas: the toolbar's Export… button.
+  const atlas = await exportAndCheck(page, 'atlas', () =>
+    page.getByRole('toolbar', { name: 'Card and atlas tools' }).getByRole('button', { name: /^Export/ }).click(),
+  );
   const atlasSummary = csvRows(atlas.files['summary.csv']);
   expect(atlasSummary.rows.length).toBeGreaterThanOrEqual(1);
 
   await page.keyboard.press('=');
   await waitForLevel(page, 2);
-  const card = await exportAndCheck(page, 'card');
+  // Card: the side pane's Export button.
+  const pane = page.getByRole('complementary', { name: 'Controls' });
+  const card = await exportAndCheck(page, 'card', () => pane.getByRole('button', { name: /^Export/ }).click());
   const games = csvRows(card.files['games.csv']);
   expect(games.rows.length).toBe(snap.nGames);
   const dist = csvRows(card.files['distribution.csv']);
@@ -195,6 +219,7 @@ test('play → tree → card → atlas → export', async ({ page, context }) =>
 
   await page.keyboard.press('=');
   await waitForLevel(page, 1);
+  // Tree: the E key.
   const treeExport = await exportAndCheck(page, 'tree');
   const tg = csvRows(treeExport.files['games.csv']);
   const col = (name: string) => tg.header.indexOf(name);
@@ -205,6 +230,11 @@ test('play → tree → card → atlas → export', async ({ page, context }) =>
   expect(tg.rows.length - player.length).toBe(tree.strategyGames);
   const nodes = csvRows(treeExport.files['nodes.csv']);
   expect(nodes.rows.length).toBeGreaterThan(2);
+
+  // The side pane's Copy R code copies the snippet for the latest export.
+  await page.evaluate(() => navigator.clipboard.writeText(''));
+  await pane.getByRole('button', { name: 'Copy R code' }).click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain(treeExport.fileName);
 
   expect(errors).toEqual([]);
 });

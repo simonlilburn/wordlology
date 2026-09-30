@@ -170,6 +170,29 @@ describe('layoutTree', () => {
     expect(count(3).ell).toBeUndefined();
   });
 
+  it('puts expanded streams on the ellipsis side, beyond the streams already shown', () => {
+    const t = fixtureTree();
+    t.add([1, 100], { solved: true, times: 50 });
+    for (let g = 0; g < 40; g++) t.add([1, 200 + g], { solved: true, times: 40 - g });
+    const trunk = pathOf(t.find([1, 100])!);
+    const opener = t.find([1])!;
+    const before = layoutTree({ root: t.root, params: params({ width: 900, totalGames: t.root.mass }), trunk });
+    const ell = before.byTrie.get(opener.id)!.children.find((c) => c.kind === 'ellipsis')!;
+    const side = Math.sign(ell.x);
+    const shownBefore = new Set(before.byTrie.get(opener.id)!.children.filter((c) => c.kind === 'node').map((c) => c.trie!.id));
+    const after = layoutTree({ root: t.root, params: params({ width: 900, totalGames: t.root.mass }), trunk, expanded: new Map([[opener.id, 1]]) });
+    const kidsAfter = after.byTrie.get(opener.id)!.children;
+    const added = kidsAfter.filter((c) => c.kind === 'node' && !shownBefore.has(c.trie!.id));
+    expect(added.length).toBe(12);
+    for (const c of added) expect(Math.sign(c.x)).toBe(side);
+    // Beyond every stream that was already on that side, and the new ellipsis outermost.
+    const oldOnSide = kidsAfter.filter((c) => c.kind === 'node' && shownBefore.has(c.trie!.id) && Math.sign(c.x) === side);
+    const edge = (c: { x: number }) => c.x * side;
+    for (const c of added) for (const o of oldOnSide) expect(edge(c)).toBeGreaterThan(edge(o));
+    const ell2 = kidsAfter.find((c) => c.kind === 'ellipsis')!;
+    for (const c of added) expect(edge(ell2)).toBeGreaterThan(edge(c));
+  });
+
   it('shows more children when zoomed in (the layout scale shrinks the label width)', () => {
     const t = fixtureTree();
     t.add([1, 100], { solved: true, times: 20 });
@@ -303,6 +326,31 @@ describe('layoutTree fits the width', () => {
     expect(ell).toBeTruthy();
     expect(Math.abs(ell!.x)).toBeLessThan(425);
     expect(ell!.right - ell!.left).toBeGreaterThanOrEqual(ell!.riverWidth);
+  });
+
+  it('still fits when grandchildren need wider ellipses than a label', () => {
+    const t = fixtureTree();
+    t.add([1, 100], { solved: true, times: 30 });
+    for (let g = 0; g < 30; g++) for (let c = 0; c < 14; c++) t.add([1, 200 + g, 500 + c], { solved: true, times: 9 });
+    const trunk = pathOf(t.find([1, 100])!);
+    const L = layoutTree({ root: t.root, params: params({ totalGames: t.root.mass, width: 856, riverScale: 0.05 }), trunk });
+    // "… 14 more" over "126 games" needs more than 56 px.
+    const ells = L.nodes.filter((n) => n.kind === 'ellipsis' && n.band === 3);
+    expect(ells.length).toBeGreaterThan(0);
+    expect(L.maxX).toBeLessThanOrEqual(428 + 1e-6);
+    expect(L.minX).toBeGreaterThanOrEqual(-428 - 1e-6);
+  });
+
+  it('lets an expanded node overflow rather than undo the expansion', () => {
+    const t = fixtureTree();
+    t.add([1, 100], { solved: true, times: 30 });
+    for (let g = 0; g < 40; g++) t.add([1, 200 + g], { solved: true, times: 2 });
+    const trunk = pathOf(t.find([1, 100])!);
+    const opener = t.find([1])!;
+    const L = layoutTree({ root: t.root, params: params({ totalGames: t.root.mass, width: 600 }), trunk, expanded: new Map([[opener.id, 1]]) });
+    const shown = L.byTrie.get(opener.id)!.children.filter((c) => c.kind === 'node').length;
+    expect(shown).toBeGreaterThan(12);
+    expect(L.maxX - L.minX).toBeGreaterThan(600);
   });
 
   it('gives a node with room for one label an ellipsis rather than hiding it', () => {

@@ -19,7 +19,10 @@ import type { FrameInfo, SceneContext, SceneLayer, ScenePointerEvent } from '../
 import { setTreeBounds } from './bounds';
 import {
   approach,
+  approachViewport,
   clampToBounds,
+  expectedViewport,
+  occlusionOf,
   fitCamera,
   fitScale,
   homeCamera,
@@ -29,6 +32,7 @@ import {
   zoomAt,
   type Bounds,
   type CamState,
+  type Occlusion,
   type Viewport,
 } from './camera';
 import { registerTreeControls, playNode } from './controls';
@@ -44,6 +48,8 @@ import { setComputing, setMinimap, setTooltip, setUi, setViewport, silhouette, t
 
 /** Screen px kept free on the left for the band labels ("GUESS 1"). */
 const GUTTER = 60;
+/** On narrow screens the band labels are set smaller. */
+const GUTTER_NARROW = 50;
 /** Screen px between the tree and the edges of its viewport. */
 const SIDE_MARGIN = 12;
 const HEADER_H = 30;
@@ -99,8 +105,15 @@ class TreeLayer implements SceneLayer {
   private camInit = false;
   /** The tree's viewport: the uncovered canvas region right of the band-label gutter (camera, fit and layout use it). */
   private vp: Viewport = { left: 0, top: 0, width: 1, height: 1 };
-  /** The whole uncovered canvas region (DOM overlays, band labels). */
+  /** The whole uncovered canvas region (band labels), eased when panes come and go. */
   private fullVp: Viewport = { left: 0, top: 0, width: 1, height: 1 };
+  /** The tree viewport the layout sizes itself to (the eased one's target). */
+  private layoutVp: Viewport = { left: 0, top: 0, width: 1, height: 1 };
+  private vpSmooth: Viewport = { left: 0, top: 0, width: 1, height: 1 };
+  private vpInit = false;
+  private lastSize = { w: 0, h: 0 };
+  /** How the panes covered the canvas the last time the tree settled at the Tree level (first guess: the target strip). */
+  private arrivalOcc: Occlusion | null = { top: 212, right: 0, bottom: 0 };
   private width = 1;
   private height = 1;
 
@@ -117,6 +130,8 @@ class TreeLayer implements SceneLayer {
   };
   private expanded = new Map<number, number>();
   private expandVersion = 0;
+  /** After an ellipsis tap: keep the first new stream where the ellipsis was on screen. */
+  private anchor: { parent: number; sx: number; known: Set<string> } | null = null;
   private revealIds: number[] = [];
   private revealHandled = 0;
   private playerLeaves: TrieNode[] = [];
@@ -241,6 +256,7 @@ class TreeLayer implements SceneLayer {
   update(f: FrameInfo, ctx: SceneContext): boolean {
     this.ctx = ctx;
     this.now = f.time;
+    let vpMoving = false;
     if (!this.added) {
       ctx.scene.add(this.group);
       this.added = true;
@@ -249,10 +265,22 @@ class TreeLayer implements SceneLayer {
     this.width = f.width;
     this.height = f.height;
     const v = ctx.viewport;
-    this.fullVp = v && v.width > 20 && v.height > 20 ? { ...v } : { left: 0, top: 0, width: f.width, height: f.height };
-    const gutter = Math.min(GUTTER, this.fullVp.width * 0.2);
+    const cur: Viewport = v && v.width > 20 && v.height > 20 ? { ...v } : { left: 0, top: 0, width: f.width, height: f.height };
+    // Remember how the panes cover the tree once it has settled at the Tree
+    // level; between the Game and the Tree lay out for that cover already.
+    if (Math.abs(z - 1) < 0.01 && !app.zDragging) this.arrivalOcc = occlusionOf(cur, f.width, f.height);
+    const target = z < 0.999 ? expectedViewport(cur, f.width, f.height, this.arrivalOcc) : cur;
+    const settleVp = !this.vpInit || f.reducedMotion || z <= 0.015 || f.width !== this.lastSize.w || f.height !== this.lastSize.h;
+    if (settleVp) {
+      this.vpSmooth = { ...target };
+      this.vpInit = true;
+    } else if (!approachViewport(this.vpSmooth, target, f.dt)) vpMoving = true;
+    this.lastSize = { w: f.width, h: f.height };
+    this.fullVp = { ...this.vpSmooth };
+    const gutter = Math.min(this.fullVp.width < 520 ? GUTTER_NARROW : GUTTER, this.fullVp.width * 0.2);
     this.vp = { ...this.fullVp, left: this.fullVp.left + gutter, width: Math.max(1, this.fullVp.width - gutter) };
-    setViewport(this.fullVp);
+    this.layoutVp = { ...target, left: target.left + gutter, width: Math.max(1, target.width - gutter) };
+    setViewport(cur);
 
     const words = app.words;
     const visible = !!words && z > 0.015 && z < 1.85;
@@ -318,7 +346,7 @@ class TreeLayer implements SceneLayer {
     this.draw(f, ctx, z);
     this.publish(f, ctx, z);
     this.zPrev = z;
-    return animating;
+    return animating || vpMoving;
   }
 
   private publishInactive(): void {
@@ -512,9 +540,11 @@ class TreeLayer implements SceneLayer {
   private layoutParams(tree: TargetTree): LayoutParams {
     const words = app.words!;
     const N = app.result.maxGuesses;
-    const vp = this.vp;
+    const vp = this.layoutVp;
     const width = Math.max(240, vp.width - 2 * SIDE_MARGIN);
-    const bandHeight = Math.round(Math.min(84, Math.max(44, (vp.height - 40 - HEADER_H) / (N + 1))));
+    // Short viewports (phones, with the target strip and the bottom sheet) get shorter rows.
+    const minBand = vp.height < 420 ? 36 : 44;
+    const bandHeight = Math.round(Math.min(84, Math.max(minBand, (vp.height - 40 - HEADER_H) / (N + 1))));
     const total = this.runTotal(tree);
     return {
       maxGuesses: N,
@@ -599,6 +629,17 @@ class TreeLayer implements SceneLayer {
     this.morph.setLayout(layout, this.now, dur);
     this.morphDur = MORPH_MS;
     this.boundsCur = { minX: layout.minX, maxX: layout.maxX, top: layout.top, bottom: layout.bottom };
+    const anchor = this.anchor;
+    this.anchor = null;
+    if (anchor) {
+      const born = (layout.byTrie.get(anchor.parent)?.children ?? []).filter((c) => c.kind === 'node' && !anchor.known.has(c.key));
+      born.sort((a, b) => Math.abs(a.x) - Math.abs(b.x));
+      if (born.length) {
+        const base = this.camTarget ?? this.cam;
+        const vx = this.vp.left + this.vp.width / 2;
+        this.setCam({ ...base, cx: born[0].x - (anchor.sx - vx) / base.s }, true);
+      }
+    }
     setTreeBounds({ x: layout.minX, y: layout.bottom, width: layout.maxX - layout.minX, height: layout.top - layout.bottom });
     if (this.pinned && !layout.byKey.has(this.pinned.key)) this.pinned = null;
     if (this.hover && !layout.byKey.has(this.hover.key)) this.hover = null;
@@ -687,6 +728,10 @@ class TreeLayer implements SceneLayer {
   }
 
   private expandNode(parentId: number): void {
+    const pl = this.layout?.byTrie.get(parentId);
+    const ell = pl?.children.find((c) => c.kind === 'ellipsis');
+    const d = ell ? this.morph.nodes.get(ell.key) : undefined;
+    this.anchor = pl && d ? { parent: parentId, sx: camToScreen(this.cam, this.vp, d.x, d.y).x, known: new Set(pl.children.map((c) => c.key)) } : null;
     this.expanded.set(parentId, (this.expanded.get(parentId) ?? 0) + 1);
     this.expandVersion++;
     this.pinned = null;
@@ -950,6 +995,7 @@ class TreeLayer implements SceneLayer {
         bandLabelAlpha,
         caption,
         fmtInt,
+        bandFontPx: this.fullVp.width < 520 ? 9 : 10.5,
       },
       { rules: this.rulesQ, ribbons: this.ribbons, quads: this.quads, text: this.text, bandQuads: this.bandQ, bandText: this.bandT },
       this.geomCache,

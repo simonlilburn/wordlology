@@ -85,7 +85,8 @@ export async function openGameAgainst(page: Page, word = TARGET, opts: OpenOptio
   expect(idx, `${word} should be in the default answer list`).toBeGreaterThanOrEqual(0);
   const code = await page.evaluate(async (i) => {
     // Vite serves the source modules in dev, so the test encodes the link with the app's own code.
-    const url = (await import(/* @vite-ignore */ '/src/app/url.ts')) as { encodeTarget(i: number): string };
+    const path = '/src/app/url.ts';
+    const url = (await import(/* @vite-ignore */ path)) as { encodeTarget(i: number): string };
     return url.encodeTarget(i);
   }, idx);
   await page.evaluate((c) => {

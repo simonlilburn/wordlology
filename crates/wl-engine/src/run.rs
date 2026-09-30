@@ -236,6 +236,9 @@ impl Run {
     /// Use another clock (milliseconds) for budgets and elapsed time.
     pub fn with_clock(mut self, clock: fn() -> f64) -> Run {
         self.clock = clock;
+        if let Work::Sampled { cache, .. } = &mut self.work {
+            cache.set_clock(clock);
+        }
         self
     }
 

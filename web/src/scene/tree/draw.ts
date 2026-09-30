@@ -49,6 +49,8 @@ export interface DrawInput {
   bandLabelAlpha: number;
   caption: string;
   fmtInt: (n: number) => string;
+  /** Band label size (screen px). */
+  bandFontPx?: number;
 }
 
 export interface DrawOutput {
@@ -114,7 +116,7 @@ export function drawTree(inp: DrawInput, out: DrawOutput, geomCache: GeomCache):
   }
   if (view && inp.bandLabelAlpha > 0) {
     const la = A * inp.bandLabelAlpha;
-    const font = 10.5 * px;
+    const font = (inp.bandFontPx ?? 10.5) * px;
     const [mr, mg, mb] = pal.muted;
     const [br, bg, bb] = pal.bg;
     for (let k = 1; k <= N + 1; k++) {

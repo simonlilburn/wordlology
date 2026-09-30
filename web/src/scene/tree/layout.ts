@@ -200,6 +200,8 @@ interface VNode {
   hiddenMatches: number;
   /** Width the node's own label needs (0 for the root). */
   own: number;
+  /** Shown because the user expanded its parent's ellipsis (it sits on the ellipsis's side). */
+  extra: boolean;
   need: number;
   needL: number;
   needR: number;
@@ -210,7 +212,7 @@ interface VNode {
 }
 
 function vnode(kind: LKind, trie: TrieNode | null, mass: number, trunk: boolean, own: number): VNode {
-  return { kind, trie, mass, trunk, children: [], hidden: null, hiddenMatches: 0, own, need: 0, needL: 0, needR: 0, side: 0, left: 0, right: 0, x: 0 };
+  return { kind, trie, mass, trunk, children: [], hidden: null, hiddenMatches: 0, own, extra: false, need: 0, needL: 0, needR: 0, side: 0, left: 0, right: 0, x: 0 };
 }
 
 const groupFmt = (n: number): string => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -310,7 +312,14 @@ export function layoutTree(input: LayoutInput): Layout {
       while (k > 0 && !fits(k)) k--;
       slots = k + 1;
     }
-    const k = n ? visibleCount(n, slots, cap, expanded.get(t.id) ?? 0, p.expandStep) : 0;
+    const taps = expanded.get(t.id) ?? 0;
+    let k = n ? visibleCount(n, slots, cap, taps, p.expandStep) : 0;
+    const lim = limits.get(t.id);
+    if (lim !== undefined && !taps && k > lim) k = lim >= n - 1 ? Math.max(0, n - 2) : Math.max(0, lim);
+    // Children shown only because of taps come out of the ellipsis, on its side.
+    const k0 = taps ? visibleCount(n, slots, cap, 0, p.expandStep) : k;
+    const extra = new Set<TrieNode>();
+    if (taps) for (let i = k0; i < Math.min(k, n); i++) if (!forced.has(kids[i].id)) extra.add(kids[i]);
     let shown: TrieNode[] = all;
     let hidden: TrieNode[] = [];
     if (k < n) {
@@ -334,7 +343,11 @@ export function layoutTree(input: LayoutInput): Layout {
       masses.push(hiddenMass);
     }
     const widths = waterFill(width, mins, masses);
-    shown.forEach((c, i) => v.children.push(decide(c, widths[i], onTrunk && trunkIds.has(c.id), 'node')));
+    shown.forEach((c, i) => {
+      const cv = decide(c, widths[i], onTrunk && trunkIds.has(c.id), 'node');
+      cv.extra = extra.has(c);
+      v.children.push(cv);
+    });
     if (hidden.length) {
       const e = vnode('ellipsis', null, hiddenMass, false, mins[mins.length - 1]);
       e.hidden = hidden;
@@ -343,7 +356,9 @@ export function layoutTree(input: LayoutInput): Layout {
     }
     return v;
   };
-  const rootV = decide(input.root, Math.max(p.width, minW), true, 'root');
+  /** Trunk node id -> at most this many other children (set when the first estimate overflowed). */
+  const limits = new Map<number, number>();
+  let rootV = decide(input.root, Math.max(p.width, minW), true, 'root');
   if (rootV.mass <= 0) rootV.mass = total;
 
   // Pass 2: needs, bottom up, for a width per game λ: every node needs its
@@ -374,10 +389,15 @@ export function layoutTree(input: LayoutInput): Layout {
       let sR = 0;
       let sL = 0;
       let ell: VNode | null = null;
+      const extras: VNode[] = [];
       for (const c of v.children) {
         if (c === tc) continue;
         if (c.kind === 'ellipsis') {
           ell = c;
+          continue;
+        }
+        if (c.extra) {
+          extras.push(c);
           continue;
         }
         c.side = next;
@@ -385,7 +405,9 @@ export function layoutTree(input: LayoutInput): Layout {
         else sL += c.need;
         next = -next;
       }
-      if (ell) ell.side = sR <= sL ? 1 : -1;
+      const ellSide = sR <= sL ? 1 : -1;
+      if (ell) ell.side = ellSide;
+      for (const c of extras) c.side = ellSide;
     }
     let sumR = 0;
     let sumL = 0;
@@ -402,6 +424,32 @@ export function layoutTree(input: LayoutInput): Layout {
   const half = p.width / 2;
   const heavier = () => Math.max(rootV.needL, rootV.needR);
   measure(rootV, 0, true);
+  // Pass 1 cannot know how much room its grandchildren need (a child's own
+  // ellipsis may be wider than a label), so if a side of the trunk still
+  // overflows, fold the lightest shown sibling at the busiest trunk node on
+  // that side into its ellipsis and decide again. Expanded nodes keep what
+  // the user asked for (the tree then overflows and the minimap appears).
+  for (let iter = 0; iter < 48 && heavier() > half + EPS; iter++) {
+    const side = rootV.needR >= rootV.needL ? 1 : -1;
+    let best: VNode | null = null;
+    let bestCount = 0;
+    for (let v: VNode | null = rootV; v; v = trunkChild(v)) {
+      if (!v.trie || (expanded.get(v.trie.id) ?? 0) > 0) continue;
+      let c = 0;
+      for (const x of v.children) if (x.kind === 'node' && !x.trunk && x.side === side && x.trie && !forced.has(x.trie.id)) c++;
+      if (c > bestCount) {
+        best = v;
+        bestCount = c;
+      }
+    }
+    if (!best || !best.trie) break;
+    let shown = 0;
+    for (const x of best.children) if (x.kind === 'node' && !x.trunk && x.trie && !forced.has(x.trie.id)) shown++;
+    limits.set(best.trie.id, shown - 1);
+    rootV = decide(input.root, Math.max(p.width, minW), true, 'root');
+    if (rootV.mass <= 0) rootV.mass = total;
+    measure(rootV, 0, true);
+  }
   let lam = 0;
   const lamMax = p.width / total;
   if (heavier() < half - EPS) {

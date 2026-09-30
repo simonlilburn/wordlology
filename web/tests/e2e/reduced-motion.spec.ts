@@ -2,6 +2,9 @@
 // transitions with short cross-fades. The journey runs again quickly and each
 // level change must finish within about 300 ms.
 import { expect, test, type Page } from '@playwright/test';
+
+// Node's environment (the web app's tsconfig has no Node types).
+const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
 import { OPENER, TARGET, openGameAgainst, playWord, row, trackPageErrors, waitForLevel, waitForTree } from './helpers';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
@@ -15,7 +18,7 @@ test.use({ contextOptions: { reducedMotion: 'reduce' } });
  * spring needs well over a second of animation time for one level.
  */
 const TRANSITION_BUDGET_MS = 300;
-const STRICT_WALL_CLOCK = process.env.E2E_STRICT_TIMING === '1';
+const STRICT_WALL_CLOCK = env.E2E_STRICT_TIMING === '1';
 
 interface Transition {
   from: number;

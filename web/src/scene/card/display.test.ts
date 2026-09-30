@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CardSnapshot } from '../../model/types';
-import { displayFromSnapshot, emptyDisplay, medianTarget, packDisplay, unpackDisplay, vectorLength } from './display';
+import { displayFromSnapshot, drawKey, emptyDisplay, medianTarget, packDisplay, unpackDisplay, vectorLength } from './display';
 
 function snap(over: Partial<CardSnapshot>): CardSnapshot {
   return {
@@ -86,5 +86,23 @@ describe('card display', () => {
     expect(medianTarget([4, NaN, 2, 3, 5])).toBe(3);
     expect(medianTarget([3, 3, 3, 3])).toBe(1);
     expect(medianTarget([NaN])).toBe(-1);
+  });
+});
+
+describe('drawKey', () => {
+  const base = displayFromSnapshot(snap({}), 20);
+  it('ignores changes too small to see', () => {
+    const tiny = { ...base, shares: base.shares.map((x) => x + 0.00001), mean: base.mean + 0.00001 };
+    expect(drawKey(tiny, 'full')).toBe(drawKey(base, 'full'));
+    const chipTiny = { ...base, shares: base.shares.map((x) => x + 0.001) };
+    expect(drawKey(chipTiny, 'chip')).toBe(drawKey(base, 'chip'));
+  });
+  it('changes with visible values, flags and progress', () => {
+    expect(drawKey({ ...base, mean: base.mean + 0.01 }, 'full')).not.toBe(drawKey(base, 'full'));
+    expect(drawKey({ ...base, complete: !base.complete }, 'chip')).not.toBe(drawKey(base, 'chip'));
+    expect(drawKey({ ...base, nTargetsDone: base.nTargetsDone + 1 }, 'full')).not.toBe(drawKey(base, 'full'));
+    const moved = { ...base, shares: base.shares.map((x, i) => (i === 2 ? x + 0.01 : x)) };
+    expect(drawKey(moved, 'chip')).not.toBe(drawKey(base, 'chip'));
+    expect(drawKey(base, 'chip')).not.toBe(drawKey(base, 'full'));
   });
 });

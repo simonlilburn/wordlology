@@ -69,6 +69,19 @@ test('phone: game view and bottom sheet', async ({ page }) => {
   expect(Math.round(sheetBox.y + sheetBox.height)).toBe(H);
   expect(await height()).toBeCloseTo(Math.round(H * 0.46), -1);
 
+  // The target browser strip spans the width, and its A–Z strip does not run into the "n / N" counter.
+  const browser = page.getByRole('region', { name: 'Target browser' });
+  await expect(browser).toBeVisible();
+  const overlap = await browser.evaluate((el) => {
+    const az = el.querySelector('[aria-label="Jump to letter"]');
+    const count = el.querySelector('.count');
+    if (!az || !count) return null;
+    const letters = [...az.children].map((c) => c.getBoundingClientRect());
+    const right = Math.max(...letters.map((r) => r.right));
+    return { lettersRight: Math.round(right), countLeft: Math.round(count.getBoundingClientRect().left) };
+  });
+  if (overlap) expect.soft(overlap.lettersRight, 'A–Z letters end before the counter').toBeLessThanOrEqual(overlap.countLeft);
+
   // Tapping the handle cycles half → full → collapsed → half.
   await handle.tap();
   await expect(handle).toHaveAttribute('aria-label', 'Resize controls sheet (full)');

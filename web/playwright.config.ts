@@ -4,8 +4,11 @@
 // regenerate the per-level baselines under tests/e2e/*-snapshots/).
 import { defineConfig, devices } from '@playwright/test';
 
+// Node's environment (the web app's tsconfig has no Node types).
+const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
+
 const PORT = 5190;
-const CI = !!process.env.CI;
+const CI = !!env.CI;
 
 export default defineConfig({
   testDir: './tests/e2e',

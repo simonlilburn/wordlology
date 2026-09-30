@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { app } from '../../app/store.svelte';
 import type { Cell } from '../atlas/cells';
 import { CARD_H, CARD_W, resolutionBucket, type Lod } from '../atlas/layout';
-import { packDisplay, unpackDisplay, vectorLength, type CardDisplay } from './display';
+import { drawKey, packDisplay, unpackDisplay, vectorLength, type CardDisplay } from './display';
 import { drawFace, FACE, type FaceInfo } from './draw';
 import { DensityGrid, pathXs } from './ghost';
 import { cardTheme, prefersDark, type CardTheme } from './ramp';
@@ -30,6 +30,27 @@ function makeCanvas(w: number, h: number): HTMLCanvasElement {
 export const ghostBudget = { frame: -1, left: 0 };
 const GHOST_GAMES_PER_FRAME = 3500;
 
+/**
+ * A global per-frame budget of face redraws (canvas drawing plus a texture
+ * upload), so a large atlas whose cards all fill at once keeps its frame
+ * rate: a full card costs 2, a chip 1. Faces that miss out stay dirty and
+ * draw on a later frame (the atlas layer rotates its order for fairness);
+ * a face's first draw and the focused card are never held back.
+ */
+export const drawBudget = { frame: -1, left: 0 };
+export const DRAW_UNITS_PER_FRAME = 10;
+
+function takeDrawBudget(now: number, lod: Lod): boolean {
+  if (drawBudget.frame !== now) {
+    drawBudget.frame = now;
+    drawBudget.left = DRAW_UNITS_PER_FRAME;
+  }
+  const cost = lod === 'full' ? 2 : 1;
+  if (drawBudget.left < cost) return false;
+  drawBudget.left -= cost;
+  return true;
+}
+
 export interface FaceRequest {
   now: number;
   dt: number;
@@ -42,6 +63,8 @@ export interface FaceRequest {
   fps: number;
   reduced: boolean;
   selected: boolean;
+  /** Draw regardless of the shared per-frame budget (the focused card). */
+  priority?: boolean;
 }
 
 export class CardFace {
@@ -69,6 +92,7 @@ export class CardFace {
   private theme: CardTheme;
   private snapNext = true;
   private selected = false;
+  private drawnKey = '';
   lastUsed = 0;
   /** Current eased display (for DOM overlays that mirror a card). */
   shown: CardDisplay;
@@ -181,8 +205,20 @@ export class CardFace {
 
     if (this.dirty) {
       const minGap = 1000 / Math.max(1, req.fps);
-      if (req.now - this.lastDraw >= minGap) this.draw(flash);
-      else animating = true;
+      if (req.now - this.lastDraw < minGap) animating = true;
+      else {
+        const shown = unpackDisplay(this.springs.x, this.latest);
+        const key = `${drawKey(shown, this.lod)}|${Math.round(flash * 24)}|${this.selected}|${this.theme.dark}|${this.canvas.height}|${this.lastInfo}`;
+        if (key === this.drawnKey) {
+          // Nothing visible changed (a spring settling, a sub-pixel move).
+          this.shown = shown;
+          this.dirty = flash > 0;
+        } else if (req.priority || this.drawnKey === '' || takeDrawBudget(req.now, this.lod)) {
+          this.shown = shown;
+          this.draw(flash);
+          this.drawnKey = key;
+        } else animating = true;
+      }
     }
 
     if (req.ghost) animating = this.ingestGhost(req) || animating;
@@ -209,7 +245,6 @@ export class CardFace {
   private draw(flash: number): void {
     const g = this.g;
     if (!g) return;
-    this.shown = unpackDisplay(this.springs.x, this.latest);
     const k = this.canvas.height / CARD_H;
     try {
       drawFace(g, k, this.shown, this.info(), {

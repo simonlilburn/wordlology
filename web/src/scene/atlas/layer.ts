@@ -85,58 +85,61 @@ export function createAtlasLayer(): SceneLayer {
       const fi = d.focusIdx;
       const sel = app.atlas.selected;
       let any = false;
-      for (let r = 0; r < rows.length; r++) {
-        for (let c = 0; c < columns.length; c++) {
-          const cell = cells.get(columns[c], rows[r]);
-          keep.add(cell.key);
-          if (fi && fi[0] === c && fi[1] === r) continue;
-          inGrid.add(cell);
-          const rect = cellRect(d.layout, c, r);
-          const onScreen = rectVisible(rect, d.view, d.vp, 24);
-          const visible = onScreen && alpha > 0.003;
-          cell.setPriority(onScreen && d.z > 1.85 ? 'visible' : 'background');
-          let slot = slots.get(cell);
-          if (visible) {
-            if (!slot) {
-              slot = { meshes: new CardMeshes(10), lod: 'full', lastSeen: now };
-              slots.set(cell, slot);
-              root.add(slot.meshes.group);
-            }
-            slot.lastSeen = now;
-            const screenH = rect.h * d.scale;
-            slot.lod = lodFor(screenH, slot.lod);
-            const face = faces.get(cell);
-            const selected = sel.some(([a, b]) => a === c && b === r);
-            if (
-              face.update({
-                now,
-                dt: f.dt,
-                lod: slot.lod,
-                devicePx: screenH * d.dpr,
-                ghost: slot.lod === 'full',
-                fps: slot.lod === 'full' ? 30 : 15,
-                reduced: d.reduced,
-                selected,
-              })
-            )
-              animating = true;
-            slot.meshes.bind(face);
-            slot.meshes.place(d, rect, 0);
-            slot.meshes.setAlpha(alpha, slot.lod === 'full' ? alpha : 0);
-            any = true;
-          } else {
-            slot?.meshes.setAlpha(0, 0);
-            const last = lastPoll.get(cell) ?? -Infinity;
-            if (now - last >= OFFSCREEN_POLL_MS) {
-              lastPoll.set(cell, now);
-              cell.poll(now);
-            }
+      // Visit cells from a rotating start so the shared redraw budget is fair.
+      const total = rows.length * columns.length;
+      const start = total > 0 ? d.frameId % total : 0;
+      for (let i = 0; i < total; i++) {
+        const idx = (start + i) % total;
+        const r = Math.floor(idx / columns.length), c = idx % columns.length;
+        const cell = cells.get(columns[c], rows[r]);
+        keep.add(cell.key);
+        if (fi && fi[0] === c && fi[1] === r) continue;
+        inGrid.add(cell);
+        const rect = cellRect(d.layout, c, r);
+        const onScreen = rectVisible(rect, d.view, d.vp, 24);
+        const visible = onScreen && alpha > 0.003;
+        cell.setPriority(onScreen && d.z > 1.85 ? 'visible' : 'background');
+        let slot = slots.get(cell);
+        if (visible) {
+          if (!slot) {
+            slot = { meshes: new CardMeshes(10), lod: 'full', lastSeen: now };
+            slots.set(cell, slot);
+            root.add(slot.meshes.group);
           }
-          watchVersion(cell, cell.version);
-          // New games arrive → wake the scene; a throttled poll still owed → keep rendering.
-          waker.watch(cell.run);
-          if (cell.run && cell.run.version !== cell.seenRunVersion) animating = true;
+          slot.lastSeen = now;
+          const screenH = rect.h * d.scale;
+          slot.lod = lodFor(screenH, slot.lod);
+          const face = faces.get(cell);
+          const selected = sel.some(([a, b]) => a === c && b === r);
+          if (
+            face.update({
+              now,
+              dt: f.dt,
+              lod: slot.lod,
+              devicePx: screenH * d.dpr,
+              ghost: slot.lod === 'full',
+              fps: slot.lod === 'full' ? 30 : 15,
+              reduced: d.reduced,
+              selected,
+            })
+          )
+            animating = true;
+          slot.meshes.bind(face);
+          slot.meshes.place(d, rect, 0);
+          slot.meshes.setAlpha(alpha, slot.lod === 'full' ? alpha : 0);
+          any = true;
+        } else {
+          slot?.meshes.setAlpha(0, 0);
+          const last = lastPoll.get(cell) ?? -Infinity;
+          if (now - last >= OFFSCREEN_POLL_MS) {
+            lastPoll.set(cell, now);
+            cell.poll(now);
+          }
         }
+        watchVersion(cell, cell.version);
+        // New games arrive → wake the scene; a throttled poll still owed → keep rendering.
+        waker.watch(cell.run);
+        if (cell.run && cell.run.version !== cell.seenRunVersion) animating = true;
       }
       for (const [cell, slot] of slots) {
         if (!inGrid.has(cell) || now - slot.lastSeen > RELEASE_MS) release(cell, slot);

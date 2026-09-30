@@ -192,3 +192,41 @@ export function medianTarget(means: ArrayLike<number>): number {
   idx.sort((a, b) => means[a] - means[b] || a - b);
   return idx[Math.floor((idx.length - 1) / 2)];
 }
+
+/**
+ * A key that changes only when a face drawn at `lod` would look different:
+ * values are quantised to what the face can show (0.1% and whole counts on
+ * a full card, half a percent and two decimals of the mean on a chip), so
+ * springs settling and tiny estimate moves do not redraw textures.
+ */
+export function drawKey(d: CardDisplay, lod: 'full' | 'chip' | 'micro'): string {
+  const q = (x: number, k: number) => (Number.isFinite(x) ? Math.round(x * k) : -1);
+  const flags = `${d.complete ? 1 : 0}${d.deterministic ? 1 : 0}${d.lowerBound ? 1 : 0}`;
+  const progress = d.complete
+    ? 1
+    : d.deterministic
+      ? q(1 - d.unresolvedFrac, 200)
+      : q(d.expectedGames > 0 ? d.nGames / d.expectedGames : 0, 200);
+  if (lod === 'micro') return `m${flags}|${progress}|${d.shares.map((x) => q(x, 100)).join(',')}|${q(d.bandTop, 20)}`;
+  if (lod === 'chip') {
+    return `c${flags}|${progress}|${d.shares.map((x) => q(x, 200)).join(',')}|${q(d.mean, 100)}|${q(d.bandTop, 40)}`;
+  }
+  return [
+    `f${flags}`,
+    progress,
+    d.shares.map((x) => q(x, 1000)).join(','),
+    d.lo.map((x) => q(x, 500)).join(','),
+    d.hi.map((x) => q(x, 500)).join(','),
+    d.counts.map((x) => q(x, 1)).join(','),
+    q(d.mean, 1000),
+    q(d.meanSe ?? NaN, 10000),
+    q(d.solveRate, 1000),
+    q(d.p95, 10),
+    q(d.unresolvedFrac, 1000),
+    q(d.bandTop, 100),
+    d.unresolved,
+    d.nTargetsDone,
+    d.nGames,
+    d.settledDepth ?? -1,
+  ].join('|');
+}
