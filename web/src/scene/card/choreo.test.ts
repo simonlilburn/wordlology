@@ -86,17 +86,14 @@ describe('reduced motion', () => {
 });
 
 describe('reduced-motion dip', () => {
-  const run = (from: DipState, z: number, ms: number) => {
+  const run = (from: DipState, z: number) => {
     let s = from;
     let t = 0;
-    let frames = 0;
     while (t < 1000 && !(s.level === dipLevel(z) && s.alpha === 1)) {
       s = dipStep(s, dipLevel(z), 16);
       t += 16;
-      frames++;
-      void ms;
     }
-    return { s, t, frames };
+    return { s, t };
   };
 
   it('maps z to the level shown', () => {
@@ -109,7 +106,7 @@ describe('reduced-motion dip', () => {
   it('fades the card in from the tree without a fade-out', () => {
     const s1 = dipStep({ level: 1, alpha: 1 }, 2, 16);
     expect(s1).toEqual({ level: 2, alpha: 0 });
-    const { s, t } = run({ level: 1, alpha: 1 }, 2, 0);
+    const { s, t } = run({ level: 1, alpha: 1 }, 2);
     expect(s).toEqual({ level: 2, alpha: 1 });
     expect(t).toBeLessThanOrEqual(200);
   });
