@@ -126,8 +126,9 @@ Every prefix of the stream is therefore an unbiased sample of the card.
 Distributions are memoised in an LRU cache keyed by `StateKey`.
 
 **Scope** `{ "targets": "all" | [answer indices] | {"sample": n}, "replicates": [start, end] }`.
-A sample takes the first n answers of the same seeded permutation. The
-replicate range defaults to `[0, R)`.
+`"all"` plays every answer in the seeded order; a sample takes the first n
+answers of the same seeded permutation; an explicit list is played in the
+given order. The replicate range defaults to `[0, R)`.
 
 ## Strategies
 
@@ -239,8 +240,10 @@ message queue between slices, so it can pause, cancel or switch jobs. It
 always works on its highest-priority unpaused run. The pool has
 `min(4, hardwareConcurrency − 1)` workers (at least 1). The scheduler assigns
 runs in priority order (`focused`, `visible`, `background`); large
-stochastic runs are sharded across idle workers by target subsets of the
-seeded order, and background runs pause while higher-priority work waits.
+stochastic runs are sharded across idle workers by replicate range (each
+shard is a full pass over the seeded target order, so every prefix stays an
+unbiased estimate), and background runs pause while higher-priority work
+waits.
 
 ## Frontend
 
@@ -256,7 +259,16 @@ TypeScript, Vite, Svelte 5 for the DOM, three.js for the scene.
   hysteresis. Buttons, `−`/`=` and Esc animate `zTarget`.
 - **Scene** (`web/src/scene/`): `SceneCanvas.svelte` mounts `createScene()`
   once; level renderers are `SceneLayer`s (`scene/types.ts`) that decide
-  their own visibility from `z`. Render on demand only.
+  their own visibility from `z`: the tree layer (`scene/tree/`), the card
+  layer (`scene/card/`, `createCardLayer()`) and the atlas layer
+  (`scene/atlas/`, `createAtlasLayer()`). Render on demand only.
+  - World units are CSS pixels at camera scale 1. The tree layer owns the
+    ortho camera for `z ≤ 1`; for `z > 1` the card and atlas layers own the
+    camera (they may switch `ctx.camera` to `'persp'` during transitions).
+    `scene/tree/bounds.ts` exports `treeBounds()`, the focused tree's world
+    rectangle, so the Tree → Card transition can start from it.
+  - During `1 < z < 2` the tree layer keeps drawing the focused tree in
+    place, fading word labels out by `z = 1.4` and the whole tree by `z = 1.8`.
 - **Runs** (`web/src/model/runs.ts`): `runs.request(config, scope, priority)`
   returns a shared `Run` whose `games` array grows as batches arrive; views
   poll `run.version` each frame or subscribe with `onChange`.
