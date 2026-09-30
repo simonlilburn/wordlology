@@ -13,6 +13,13 @@
 //!   pattern order (so the summation order is unchanged), resetting only
 //!   what it touched instead of all 3^L buckets.
 //!
+//! For larger candidate sets and u8 rows (words of up to five letters) it
+//! switches to a laned kernel: four interleaved histograms (so runs of
+//! candidates in the same bucket do not wait on each other's increments),
+//! summed afterwards, with the buckets holding two or more candidates found
+//! by a branch-free scan four buckets at a time. The terms are still added in
+//! increasing pattern order, so the result is the same bit for bit.
+//!
 //! Over the allowed pool, [`Equivalence`] groups guesses that give the same
 //! feedback on every candidate, so each group is scored once (with few
 //! candidates left, a pool of 8,636 words has only a few thousand groups).
@@ -24,6 +31,11 @@ use wl_core::{math, AnswerIdx, CandidateSet, PatternMatrix, Row, WordId, WordLis
 
 use crate::{Ctx, State};
 
+/// Candidate sets at least this large use the laned kernel (for u8 rows).
+/// Below it, the fixed cost of summing and scanning 256 buckets per guess
+/// outweighs what the lanes save.
+const LANED_MIN: usize = 64;
+
 /// Scores guesses against one candidate set. Build one per state.
 pub struct InfoScorer {
     cands: Vec<AnswerIdx>,
@@ -34,6 +46,61 @@ pub struct InfoScorer {
     counts: Vec<u16>,
     /// Bit p is set when pattern p has a non-zero count.
     touched: Vec<u64>,
+    /// Set for candidate sets of at least [`LANED_MIN`] with u8 patterns.
+    lanes: Option<Box<Lanes>>,
+}
+
+/// Working memory of the laned kernel.
+struct Lanes {
+    /// Four histograms; candidate i is counted in histogram i mod 4.
+    hist: [[u16; 256]; 4],
+    /// Their sum: the count of each pattern.
+    sum: [u16; 256],
+}
+
+impl Lanes {
+    /// Σ c·log2(c) over buckets with c > 1, in increasing pattern order, for a u8 row.
+    #[inline(always)]
+    fn sum_nlogn(&mut self, cands: &[AnswerIdx], row: &[u8], nlogn: &[f64]) -> f64 {
+        let [h0, h1, h2, h3] = &mut self.hist;
+        let mut quads = cands.chunks_exact(4);
+        for q in &mut quads {
+            h0[row[q[0] as usize] as usize] += 1;
+            h1[row[q[1] as usize] as usize] += 1;
+            h2[row[q[2] as usize] as usize] += 1;
+            h3[row[q[3] as usize] as usize] += 1;
+        }
+        for &a in quads.remainder() {
+            h0[row[a as usize] as usize] += 1;
+        }
+        // Counts fit a u16 (at most u16::MAX candidates), so the sum never wraps.
+        for p in 0..256 {
+            self.sum[p] = h0[p].wrapping_add(h1[p]).wrapping_add(h2[p]).wrapping_add(h3[p]);
+        }
+        self.hist = [[0; 256]; 4];
+        // Bitmap of the buckets holding two or more candidates, four u16
+        // counts at a time: clear bit 0 of each count, then set bit 15 of
+        // each non-zero count without carrying into the next, and gather
+        // those four bits into a nibble with one multiplication.
+        let mut many = [0u64; 4];
+        for (w, c) in self.sum.chunks_exact(4).enumerate() {
+            let x = u64::from(c[0]) | u64::from(c[1]) << 16 | u64::from(c[2]) << 32 | u64::from(c[3]) << 48;
+            let y = x & 0xfffe_fffe_fffe_fffe;
+            let high = (((y & 0x7fff_7fff_7fff_7fff) + 0x7fff_7fff_7fff_7fff) | y) & 0x8000_8000_8000_8000;
+            let nibble = ((high >> 15).wrapping_mul(1 << 45 | 1 << 30 | 1 << 15 | 1) >> 45) & 0xf;
+            many[w >> 4] |= nibble << ((w & 15) * 4);
+        }
+        let mut sum = 0.0;
+        for (i, &word) in many.iter().enumerate() {
+            let mut bits = word;
+            while bits != 0 {
+                let p = i * 64 + bits.trailing_zeros() as usize;
+                bits &= bits - 1;
+                sum += nlogn[self.sum[p] as usize];
+            }
+        }
+        sum
+    }
 }
 
 impl InfoScorer {
@@ -55,6 +122,8 @@ impl InfoScorer {
             nlogn,
             counts: vec![0; n],
             touched: vec![0; n.div_ceil(64)],
+            lanes: (t >= LANED_MIN && matrix.n_patterns() <= 256)
+                .then(|| Box::new(Lanes { hist: [[0; 256]; 4], sum: [0; 256] })),
         }
     }
 
@@ -78,7 +147,10 @@ impl InfoScorer {
             return 0.0;
         }
         let sum = match matrix.row(guess) {
-            Row::U8(r) => self.sum_nlogn(|a| r[a as usize] as usize),
+            Row::U8(r) => match &mut self.lanes {
+                Some(lanes) => lanes.sum_nlogn(&self.cands, r, &self.nlogn),
+                None => self.sum_nlogn(|a| r[a as usize] as usize),
+            },
             Row::U16(r) => self.sum_nlogn(|a| r[a as usize] as usize),
         };
         (self.log2_total - sum / self.total).max(0.0)
@@ -208,6 +280,31 @@ mod tests {
             let mut s = InfoScorer::new(&m, &cands);
             for g in 0..words.len() as WordId {
                 assert_eq!(s.score(&m, g).to_bits(), expected_info(&m, g, &cands, &mut scratch).to_bits());
+            }
+        }
+    }
+
+    #[test]
+    fn laned_kernel_identical_to_expected_info() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/wordlists/ref-en-5");
+        let list = wl_core::load_dir(&dir).unwrap();
+        let m = PatternMatrix::build(&list);
+        let mut scratch = vec![0u32; m.n_patterns()];
+        let all = CandidateSet::full(list.n_answers());
+        // The full set, the large buckets of a weak opener, and sets just
+        // around the laned threshold (and not a multiple of four).
+        let mut sets = vec![all.clone()];
+        sets.extend(m.partition(&all, list.id("fuzzy").unwrap()).into_iter().map(|(_, s)| s).filter(|s| s.len() > 20));
+        for n in [LANED_MIN - 1, LANED_MIN, LANED_MIN + 1, LANED_MIN + 3, 150, 299] {
+            sets.push(CandidateSet::from_iter(list.n_answers(), (0..n as AnswerIdx).map(|i| i * 7 % 300)));
+        }
+        assert!(sets.iter().any(|s| s.len() >= LANED_MIN) && sets.iter().any(|s| s.len() < LANED_MIN));
+        for cands in &sets {
+            let mut s = InfoScorer::new(&m, cands);
+            assert_eq!(s.lanes.is_some(), cands.len() >= LANED_MIN);
+            for g in 0..list.n_guesses() as WordId {
+                let want = expected_info(&m, g, cands, &mut scratch);
+                assert_eq!(s.score(&m, g).to_bits(), want.to_bits(), "{} over {}", list.word(g), cands.len());
             }
         }
     }

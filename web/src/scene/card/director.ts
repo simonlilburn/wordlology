@@ -25,7 +25,7 @@ import {
   type Viewport,
 } from '../atlas/layout';
 import { publish, sceneView } from '../atlas/view.svelte';
-import { atlasFrame, fadeToward, STACK_PLANES, stackFrame, type AtlasFrame, type StackFrame } from './choreo';
+import { atlasFrame, dipLevel, dipStep, STACK_PLANES, stackFrame, type AtlasFrame, type DipState, type StackFrame } from './choreo';
 import { FACE } from './draw';
 import { springStep } from './spring';
 
@@ -65,6 +65,8 @@ class Director {
   /** Reduced-motion cross-fades (0..1) for the card and the atlas. */
   rmCard = 0;
   rmAtlas = 0;
+  /** Reduced motion: the level whose view is shown and its opacity. */
+  dip: DipState = { level: 1, alpha: 0 };
   /** Layout → world: wx = offset.x + x·k, wy = offset.y − y·k·yUp. */
   offset = { x: 0, y: 0 };
   /**
@@ -99,17 +101,17 @@ class Director {
     this.yUp = ctx.ortho.top >= ctx.ortho.bottom ? 1 : -1;
     const z = this.z;
 
-    // Reduced motion: cross-fades toward the nearest level.
+    // Reduced motion: a dip cross-fade (≤ 200 ms) toward the nearest level;
+    // the view switches only while the content is invisible.
     if (this.reduced) {
-      const nc = fadeToward(this.rmCard, z >= 1.5 ? 1 : 0, f.dt);
-      const na = fadeToward(this.rmAtlas, z >= 2.5 ? 1 : 0, f.dt);
-      if (nc !== this.rmCard || na !== this.rmAtlas) this.animating = true;
-      this.rmCard = nc;
-      this.rmAtlas = na;
+      const next = dipStep(this.dip, dipLevel(z), f.dt);
+      if (next.level !== this.dip.level || next.alpha !== this.dip.alpha) this.animating = true;
+      this.dip = next;
     } else {
-      this.rmCard = z >= 1.5 ? 1 : 0;
-      this.rmAtlas = z >= 2.5 ? 1 : 0;
+      this.dip = { level: dipLevel(z), alpha: 1 };
     }
+    this.rmCard = this.dip.level >= 2 ? this.dip.alpha : 0;
+    this.rmAtlas = this.dip.level === 3 ? this.dip.alpha : 0;
 
     if (z <= 1) {
       this.captureTreeCam(ctx);
@@ -167,10 +169,9 @@ class Director {
 
     if (this.reduced) {
       this.stack = null;
-      this.view = z < 1.5 ? treeV : z < 2.5 ? cardV : atlasV;
-      const a = atlasFrame(z);
-      this.atlas = { viewT: this.rmAtlas, neighbourAlpha: this.rmCard, dashedAlpha: this.rmCard, headerAlpha: this.rmCard };
-      void a;
+      const lvl = this.dip.level;
+      this.view = lvl === 1 ? treeV : lvl === 2 ? cardV : atlasV;
+      this.atlas = { viewT: lvl === 3 ? 1 : 0, neighbourAlpha: this.rmCard, dashedAlpha: this.rmCard, headerAlpha: this.rmAtlas };
     } else if (z < 2) {
       const s = stackFrame(z - 1);
       this.stack = s;
@@ -365,3 +366,8 @@ export function rowsScale(maxGuesses: number): number {
 }
 
 export const director = new Director();
+
+// Dev builds: a read-only handle for end-to-end checks of the transitions.
+if (import.meta.env?.DEV && typeof window !== 'undefined') {
+  (window as unknown as { __wordlologyDirector?: Director }).__wordlologyDirector = director;
+}

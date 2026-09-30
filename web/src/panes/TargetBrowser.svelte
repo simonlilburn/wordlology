@@ -21,6 +21,7 @@
   const SPACING = 44; // between side covers (px)
   const DRAG_PX = 60; // drag distance per cover
   const STRIP_H = 212;
+  const PERSPECTIVE = 700; // px, as in the .stage style
 
   const SORTS: { value: TargetSort; label: string }[] = [
     { value: 'alpha', label: 'Alphabetical' },
@@ -101,7 +102,7 @@
     };
   }
 
-  function coverStyle(i: number): string {
+  function coverPose(i: number) {
     const k = i - centre - drag;
     const ak = Math.abs(k);
     const a = Math.min(1, ak);
@@ -110,7 +111,21 @@
     const rot = -sgn * 60 * a;
     const z = (1 - a) * 70 - Math.max(0, ak - 1) * 6;
     const fade = ak > SIDE ? Math.max(0, SIDE + 1 - ak) : 1;
+    return { ak, x, rot, z, fade };
+  }
+
+  function coverStyle(i: number): string {
+    const { ak, x, rot, z, fade } = coverPose(i);
     return `transform: translateX(${x.toFixed(1)}px) translateZ(${z.toFixed(1)}px) rotateY(${rot.toFixed(1)}deg); z-index: ${200 - Math.round(ak * 10)}; opacity: ${fade.toFixed(2)}`;
+  }
+
+  // Words sit in an unrotated row under the covers, at each cover's projected
+  // centre, so neighbouring covers never hide them.
+  function labelStyle(i: number): string {
+    const { ak, x, z, fade } = coverPose(i);
+    const sx = (x * PERSPECTIVE) / (PERSPECTIVE - z);
+    const size = ak < 0.5 ? 0.78 : 0.6;
+    return `transform: translateX(${sx.toFixed(1)}px) translateX(-50%); font-size: ${size}rem; opacity: ${fade.toFixed(2)}; z-index: ${200 - Math.round(ak * 10)}`;
   }
 
   function flipTo(index: number) {
@@ -368,8 +383,13 @@
               {#if filter && Number.isFinite(info.share)}
                 <span class="match" aria-hidden="true"><span style:width="{info.share * 100}%"></span></span>
               {/if}
-              <span class="word" class:hidden={info.hidden}>{info.label}</span>
             </button>
+          {/each}
+        </div>
+        <div class="words" aria-hidden="true">
+          {#each visible as i (order[i])}
+            {@const info = coverInfo(order[i])}
+            <span class="word" class:hidden={info.hidden} class:centre={i === centre} style={labelStyle(i)}>{info.label}</span>
           {/each}
         </div>
       </div>
@@ -513,9 +533,37 @@
     border-radius: 4px;
     background: var(--bg);
   }
+  .words {
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    width: 0;
+    height: 18px;
+    pointer-events: none;
+  }
   .word {
-    font: 700 0.78rem var(--font-mono);
-    letter-spacing: 0.08em;
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    padding: 0 3px;
+    border-radius: 4px;
+    background: var(--bg);
+    font-family: var(--font-mono);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+    white-space: nowrap;
+    color: var(--muted);
+    transition:
+      transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+      opacity 0.35s linear;
+  }
+  .word.centre {
+    color: var(--fg);
+  }
+  .dragging .word,
+  :global(.reduced-motion) .word {
+    transition: none;
   }
   .word.hidden {
     color: var(--muted);

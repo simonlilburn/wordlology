@@ -71,12 +71,14 @@ export const treeUi = $state({
   version: 0,
   /** Viewport (uncovered canvas region, CSS px). */
   viewport: { left: 0, top: 0, width: 0, height: 0 },
+  /** The text outline panel is open (views/tree). */
+  outlineOpen: false,
 });
 
 /** Silhouette segments for the minimap: x0, y0, x1, y1, width (world), flat. Not reactive (read on version bumps). */
 export const silhouette: { segs: Float32Array; n: number } = { segs: new Float32Array(0), n: 0 };
 
-type UiKey = Exclude<keyof typeof treeUi, 'minimap' | 'tooltip' | 'computing' | 'viewport'>;
+type UiKey = Exclude<keyof typeof treeUi, 'minimap' | 'tooltip' | 'computing' | 'viewport' | 'outlineOpen'>;
 
 /** Write a scalar field only when it changed. */
 export function setUi<K extends UiKey>(key: K, value: (typeof treeUi)[K]): void {

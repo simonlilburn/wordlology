@@ -197,6 +197,45 @@ class TreeLayer implements SceneLayer {
     this.ctx?.requestRender();
   }
 
+  /** Dev and end-to-end tests: every drawn node with its screen box (CSS px). */
+  debugNodes(): { key: string; kind: string; word: string; id: number; x: number; y: number; w: number; h: number; mode: string; trunk: boolean }[] {
+    const words = app.words;
+    const out: ReturnType<TreeLayer['debugNodes']> = [];
+    if (!words) return out;
+    for (const d of this.morph.order) {
+      if (d.dying || d.l.kind === 'root') continue;
+      const g = this.geomCache.get(d);
+      const p = camToScreen(this.cam, this.vp, d.x, d.y);
+      const t = d.l.trie;
+      out.push({
+        key: d.key,
+        kind: d.l.kind,
+        word: t && d.l.kind === 'node' ? (words.guesses[t.guess] ?? '') : '',
+        id: t ? t.id : -1,
+        x: p.x,
+        y: p.y,
+        w: g ? g.w * this.cam.s : 0,
+        h: g ? g.h * this.cam.s : 0,
+        mode: g ? g.mode : 'hidden',
+        trunk: d.l.trunk,
+      });
+    }
+    return out;
+  }
+
+  /** Dev and end-to-end tests: camera, growth and layout state. */
+  debugState(): Record<string, unknown> {
+    return {
+      cam: { ...this.cam },
+      vp: { ...this.vp },
+      bounds: { ...this.boundsCur },
+      growth: this.growth.phase,
+      revealed: this.reveal?.count ?? 0,
+      nodes: this.layout?.nodes.length ?? 0,
+      riverScale: riverPxPerGame,
+    };
+  }
+
   // ---------------------------------------------------------------- frame
 
   update(f: FrameInfo, ctx: SceneContext): boolean {
@@ -388,11 +427,19 @@ class TreeLayer implements SceneLayer {
       const res = advanceClock(g.clock, f.dt, total, r.available, this.runDone(), g.timing);
       g.clock = res.clock;
       g.stalled = res.stalled;
-      const want = revealCount(g.clock, total, g.timing);
+      let want = revealCount(g.clock, total, g.timing);
       while (r.count < want) {
         const i = r.count;
-        const drawMs = i < g.timing.firstCount ? g.timing.drawFirstMs : g.timing.drawLaterMs;
+        const first = i < g.timing.firstCount;
+        const drawMs = first ? g.timing.drawFirstMs : g.timing.drawLaterMs;
         if (!r.revealNext(this.now, drawMs)) break;
+        // A slow, one-at-a-time slot is only worth spending on a game that
+        // adds something to the picture: one that retraces paths already on
+        // screen (the trunk, at first) passes straight to the next game.
+        if (first && r.lastFresh === 0 && r.count < total) {
+          g.clock = Math.max(g.clock, r.count * g.timing.firstMs);
+          want = revealCount(g.clock, total, g.timing);
+        }
       }
       if (r.count >= total || (this.runDone() && r.pending === 0 && r.count >= r.available)) {
         g.phase = 'done';
@@ -479,7 +526,7 @@ class TreeLayer implements SceneLayer {
       expandStep: MAX_CHILDREN,
       bandHeight,
       headerHeight: HEADER_H,
-      riverScale: Math.min(4, (0.22 * width) / total),
+      riverScale: Math.min(4, (0.16 * width) / total),
       solvedCode: Math.pow(3, words.wordLength) - 1,
     };
   }
@@ -1101,6 +1148,8 @@ function quads(q: QuadBatch, x: number, y: number, w: number, h: number, c: read
 
 /** The Tree view layer (registered first by createScene). */
 export function createTreeLayer(): SceneLayer {
-  return new TreeLayer();
+  const layer = new TreeLayer();
+  if (import.meta.env?.DEV && typeof window !== 'undefined') (window as unknown as { __wordlologyTree?: TreeLayer }).__wordlologyTree = layer;
+  return layer;
 }
 

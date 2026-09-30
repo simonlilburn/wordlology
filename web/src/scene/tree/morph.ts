@@ -1,7 +1,7 @@
 // Animated display nodes: each layout node (matched by its path key) glides
 // from where it was drawn to its new place when the layout changes (growth,
-// zoom, selection, ellipsis expansion, a new target). New nodes grow out of
-// their parent; nodes that left the layout fade out where they were.
+// zoom, selection, ellipsis expansion, a new target). New nodes fade in at
+// their place; nodes that left the layout fade out where they were.
 
 import type { Layout, LNode } from './layout';
 
@@ -58,22 +58,23 @@ export class Morph {
       let d = this.nodes.get(l.key);
       const parent = l.parent ? (this.nodes.get(l.parent.key) ?? null) : null;
       if (!d) {
-        // Born: start at the parent's current place (or its new place if it is new too).
-        const px = parent ? parent.x : l.x;
-        const py = parent ? parent.y : l.y;
+        // Born: fade in at its place (its river draws on from the parent), so
+        // a burst of new nodes never piles up around their parents.
+        const px = l.x;
+        const py = l.y;
         d = {
           key: l.key,
           l,
           parent,
           x: px,
           y: py,
-          rw: 0,
-          ro: 0,
+          rw: l.riverWidth,
+          ro: l.riverOffset,
           alpha: 0,
           fx: px,
           fy: py,
-          frw: 0,
-          fro: 0,
+          frw: l.riverWidth,
+          fro: l.riverOffset,
           fa: 0,
           tx: l.x,
           ty: l.y,

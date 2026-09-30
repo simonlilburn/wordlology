@@ -37,6 +37,8 @@ export class RevealState {
   dur: Float32Array = new Float32Array(64);
   /** Revealed games whose river segments are still drawing (for animation). */
   lastDrawEnd = 0;
+  /** Nodes the last revealed game put on screen for the first time. */
+  lastFresh = 0;
 
   constructor(
     public tree: TargetTree,
@@ -94,10 +96,12 @@ export class RevealState {
     const g = this.tree.games[gi];
     const path = gamePath(this.tree, g);
     this.count++;
+    this.lastFresh = 0;
     if (!path) return true;
     this.ensure(this.tree.nodes.length);
     let fresh = 0;
     for (const n of path) if (this.mass[n.id] === 0 && Number.isNaN(this.start[n.id])) fresh++;
+    this.lastFresh = fresh;
     const seg = fresh > 0 ? drawMs / fresh : 0;
     let k = 0;
     for (const n of path) {

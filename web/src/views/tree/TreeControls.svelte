@@ -1,12 +1,17 @@
 <script lang="ts">
-  // Visible Tree view controls: zoom +, −, Fit; Skip during the growth
-  // animation; the computing status; the deterministic-strategy note.
+  // Visible Tree view controls: zoom +, −, Fit and the outline toggle in a
+  // row at the lower left; Skip during the growth animation, the computing
+  // status and the deterministic-strategy note at the bottom centre.
   import { treeControls } from '../../scene/tree/controls';
   import { treeUi } from '../../scene/tree/ui.svelte';
   import { fmtInt } from './pathinfo';
 
+  let { onOutline }: { onOutline?: () => void } = $props();
+
   const vp = $derived(treeUi.viewport);
   const shown = $derived(treeUi.alpha > 0.02);
+  /** Narrow screens put the status above the control row. */
+  const narrow = $derived(vp.width < 640);
   const status = $derived.by(() => {
     const c = treeUi.computing;
     if (!c) return '';
@@ -22,23 +27,43 @@
     style:opacity={treeUi.alpha}
     inert={!treeUi.active}
     role="group"
-    aria-label="Tree zoom"
+    aria-label="Tree view"
   >
-    <button type="button" onclick={() => treeControls.zoomIn()} disabled={treeUi.atMax} title="Zoom in" aria-label="Zoom in">
+    <button type="button" onclick={() => treeControls.zoomIn()} disabled={treeUi.atMax} title="Zoom in (=)" aria-label="Zoom in">
       <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
     </button>
     <button
       type="button"
       onclick={() => treeControls.zoomOut()}
-      title={treeUi.atFit ? 'Zoom out to the Card view' : 'Zoom out'}
+      title={treeUi.atFit ? 'Zoom out to the Card view (−)' : 'Zoom out (−)'}
       aria-label={treeUi.atFit ? 'Zoom out to the Card view' : 'Zoom out'}
     >
       <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
     </button>
     <button type="button" class="fit" onclick={() => treeControls.fit()} title="Fit the whole tree" aria-label="Fit the whole tree">Fit</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button
+      type="button"
+      class:on={treeUi.outlineOpen}
+      onclick={() => onOutline?.()}
+      aria-expanded={treeUi.outlineOpen}
+      aria-controls="tree-outline"
+      title="Text outline of the tree"
+      aria-label="Text outline of the tree"
+    >
+      <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"
+        ><path d="M4 5h12M7 10h9M7 15h9" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg
+      >
+    </button>
   </div>
 
-  <div class="status" style:left="{vp.left + vp.width / 2}px" style:top="{vp.top + vp.height - 12}px" style:opacity={treeUi.alpha} inert={!treeUi.active}>
+  <div
+    class="status"
+    style:left="{vp.left + vp.width / 2}px"
+    style:top="{vp.top + vp.height - (narrow ? 70 : 12)}px"
+    style:opacity={treeUi.alpha}
+    inert={!treeUi.active}
+  >
     {#if treeUi.deterministic}
       <p class="note">Deterministic strategy: one game per target.</p>
     {/if}
@@ -57,9 +82,9 @@
     z-index: 8;
     transform: translateY(-100%);
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 4px;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
     border: 1px solid var(--line);
     border-radius: 12px;
     background: color-mix(in srgb, var(--bg) 88%, transparent);
@@ -79,6 +104,10 @@
   .zoom button:hover:not(:disabled) {
     background: var(--panel);
   }
+  .zoom button.on {
+    background: var(--fg);
+    color: var(--bg);
+  }
   .zoom button:disabled {
     opacity: 0.4;
     cursor: default;
@@ -91,6 +120,12 @@
   .zoom .fit {
     font-size: 0.8rem;
     font-weight: 700;
+  }
+  .sep {
+    width: 1px;
+    height: 24px;
+    margin: 0 2px;
+    background: var(--line);
   }
   .status {
     position: absolute;

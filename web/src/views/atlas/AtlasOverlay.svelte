@@ -66,7 +66,7 @@
     const s = sceneView.s;
     const x = sceneView.tx + c * layout.pitchX * s + (drag?.kind === 'col' && drag.index === c ? drag.dx : 0);
     const y = sceneView.ty - HEADER_H - 8;
-    return `left:${x.toFixed(1)}px;top:${y.toFixed(1)}px;width:${(CARD_W * s).toFixed(1)}px;height:${HEADER_H}px;opacity:${headerAlpha.toFixed(3)}`;
+    return `left:${x.toFixed(1)}px;top:${y.toFixed(1)}px;width:${headW.toFixed(1)}px;height:${HEADER_H}px;opacity:${headerAlpha.toFixed(3)}`;
   };
   const ROW_W = 140;
   const rowStyle = (r: number): string => {
@@ -75,8 +75,19 @@
     const y = sceneView.ty + r * layout.pitchY * s + (drag?.kind === 'row' && drag.index === r ? drag.dy : 0);
     return `left:${x.toFixed(1)}px;top:${y.toFixed(1)}px;width:${ROW_W}px;height:${Math.max(44, CARD_H * s).toFixed(1)}px;opacity:${headerAlpha.toFixed(3)}`;
   };
-  const narrow = $derived(CARD_W * sceneView.s < 130);
-  const short = $derived(CARD_H * sceneView.s < 96);
+  /**
+   * Header width on screen decides what a column header shows: the name with
+   * a "Rank openers" button, the name with an icon button, the name alone
+   * (ranking stays in the header menu), or just the swatch. Narrow headers
+   * borrow the gap to the next column.
+   */
+  const colW = $derived(CARD_W * sceneView.s);
+  const headW = $derived(colW >= 170 ? colW : Math.max(colW, layout.pitchX * sceneView.s - 6));
+  const wide = $derived(headW >= 300);
+  const narrow = $derived(headW < 170);
+  const showRank = $derived(headW >= 150);
+  const tiny = $derived(headW < 70);
+  const short = $derived(CARD_H * sceneView.s < 110);
 
   // Dragging headers to reorder columns and rows.
   let drag = $state<{ kind: 'col' | 'row'; index: number; x0: number; y0: number; dx: number; dy: number; moved: boolean } | null>(null);
@@ -273,11 +284,12 @@
 {#if sceneView.visible && headerAlpha > 0.02}
   <div class="headers" inert={headerAlpha < 0.5}>
     {#each axes.columns as s, c (s.id)}
-      <div class="col-head" class:narrow class:dragging={drag?.kind === 'col' && drag.index === c} style={colStyle(c)}>
+      <div class="col-head" class:narrow class:tiny class:margins={cardUi.margins && multi} class:dragging={drag?.kind === 'col' && drag.index === c} style={colStyle(c)}>
         <button
           class="grip"
           aria-haspopup="menu"
-          aria-label="{s.label}: column options (drag to move)"
+          aria-label="{s.label}{cardUi.margins && multi ? `, column mean ${fmtMean(colMeans[c], null, !colDone[c])}` : ''}: column options (drag to move)"
+          title={s.label}
           onpointerdown={(e) => dragStart(e, 'col', c)}
           onpointermove={dragMove}
           onpointerup={gripUp}
@@ -285,14 +297,18 @@
           onclick={(e) => gripClick(e, 'col', c)}
         >
           <span class="swatch" style="background:{s.colour}" aria-hidden="true"></span>
-          <span class="name">{s.label}</span>
-          {#if cardUi.margins && multi}
-            <span class="margin">{fmtMean(colMeans[c], null, !colDone[c])}</span>
-          {/if}
+          <span class="lines">
+            {#if !(tiny && cardUi.margins && multi)}<span class="name">{s.label}</span>{/if}
+            {#if cardUi.margins && multi}
+              <span class="margin">{tiny ? '' : 'mean '}{fmtMean(colMeans[c], null, !colDone[c])}</span>
+            {/if}
+          </span>
         </button>
-        <button class="rank" onclick={() => rankOpenersFor(c)} title="Rank openers under {s.label}" aria-label="Rank openers under {s.label}">
-          {#if narrow}<span aria-hidden="true">⇅</span>{:else}Rank openers{/if}
-        </button>
+        {#if showRank}
+          <button class="rank" class:icon={!wide} onclick={() => rankOpenersFor(c)} title="Rank openers under {s.label}" aria-label="Rank openers under {s.label}">
+            {#if wide}Rank openers{:else}<span aria-hidden="true">⇅</span>{/if}
+          </button>
+        {/if}
       </div>
     {/each}
     {#each axes.rows as o, r (o ?? '∅')}
@@ -312,7 +328,7 @@
             <span class="margin">{fmtMean(rowMeans[r], null, !rowDone[r])}</span>
           {/if}
         </button>
-        <button class="rank" onclick={() => rankStrategiesFor(r)} title="Rank strategies for {opener(o)}" aria-label="Rank strategies for opener {opener(o)}">
+        <button class="rank" class:icon={short} onclick={() => rankStrategiesFor(r)} title="Rank strategies for {opener(o)}" aria-label="Rank strategies for opener {opener(o)}">
           {#if short}<span aria-hidden="true">⇅</span>{:else}Rank strategies{/if}
         </button>
       </div>
@@ -483,6 +499,13 @@
     height: 12px;
     border-radius: 50%;
   }
+  .lines {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
   .name {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -490,8 +513,44 @@
     font-weight: 600;
     font-size: 13px;
   }
+  .col-head .name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .col-head.margins .name {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
   .narrow .name {
     font-size: 11.5px;
+  }
+  .col-head .margin {
+    margin-left: 0;
+    font-size: 11.5px;
+  }
+  .col-head.tiny .grip {
+    padding: 0 4px;
+    gap: 3px;
+    justify-content: center;
+  }
+  .col-head.tiny .swatch {
+    width: 9px;
+    height: 9px;
+  }
+  .col-head.tiny .lines {
+    flex: none;
+  }
+  .col-head.tiny .name {
+    display: none;
+  }
+  .rank.icon {
+    width: 44px;
+    padding: 0;
+    font-size: 16px;
   }
   .word {
     font-family: var(--font-mono);
