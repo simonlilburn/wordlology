@@ -133,11 +133,6 @@ export async function winInTwo(page: Page): Promise<void> {
   await page.waitForFunction(() => window.__wordlology!.app.game.board?.status === 'won');
 }
 
-/** Current zoom value. */
-export async function zoom(page: Page): Promise<number> {
-  return page.evaluate(() => window.__wordlology!.app.z);
-}
-
 /** Wait until z has settled at a level. */
 export async function waitForLevel(page: Page, level: number, timeout = 20_000): Promise<void> {
   await page.waitForFunction(
@@ -158,36 +153,6 @@ export async function waitForTree(page: Page, timeout = 60_000): Promise<void> {
 /** Wait for the focused card run to finish. */
 export async function waitForCard(page: Page, timeout = 120_000): Promise<void> {
   await page.waitForFunction(() => window.__wordlology!.focusData.cardRun?.status === 'done', null, { timeout });
-}
-
-/** Wait for a few animation frames so on-demand rendering catches up. */
-export async function settleFrames(page: Page, frames = 6): Promise<void> {
-  await page.evaluate(
-    (n) =>
-      new Promise<void>((resolve) => {
-        let left = n;
-        const tick = () => (--left <= 0 ? resolve() : requestAnimationFrame(tick));
-        requestAnimationFrame(tick);
-      }),
-    frames,
-  );
-}
-
-/** Press a key and measure (in page time) how long z takes to reach `level`. */
-export async function timedLevelChange(page: Page, key: string, level: number, timeout = 5_000): Promise<number> {
-  await page.evaluate(() => {
-    (window as unknown as { __e2eT0: number }).__e2eT0 = performance.now();
-  });
-  await page.keyboard.press(key);
-  await page.waitForFunction(
-    (l) => {
-      const a = window.__wordlology!.app;
-      return a.zTarget === l && a.z === l;
-    },
-    level,
-    { polling: 'raf', timeout },
-  );
-  return page.evaluate(() => performance.now() - (window as unknown as { __e2eT0: number }).__e2eT0);
 }
 
 /** Collect uncaught page errors for a test (asserted empty at the end). */

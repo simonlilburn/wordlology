@@ -1,6 +1,7 @@
-// Replay: a path selected in the Tree opens on the board, where ← / → scrub
-// it, Next plays the path's next guess (or draws the strategy's), and the hint
-// chip plays the strategy's most likely guess, branching the path.
+// Replay: a path selected in the Tree (side pane Play, or Shift+Enter in the
+// tree outline) opens on the board, where ← / → scrub it, Next plays the
+// path's next guess (or draws the strategy's), and the hint chip plays the
+// strategy's most likely guess, branching the path.
 import { expect, test, type Page } from '@playwright/test';
 import { OPENER, TARGET, openGameAgainst, row, trackPageErrors, waitForLevel, waitForTree, winInTwo } from './helpers';
 
@@ -93,5 +94,26 @@ test('replay a tree path: scrub, Next and the hint chip', async ({ page }) => {
   } else {
     await expect(next).toBeDisabled();
   }
+
+  // A path picked in the Tree's outline plays with Shift+Enter.
+  await page.keyboard.press('-');
+  await waitForLevel(page, 1);
+  const toggle = page.locator('button[aria-controls="tree-outline"]');
+  await toggle.click();
+  const outline = page.getByRole('tree');
+  await expect(outline).toBeVisible();
+  const crane = outline.locator('[role="treeitem"][aria-level="1"]');
+  await crane.focus();
+  await page.keyboard.press('ArrowDown'); // the heaviest second guess after CRANE
+  const picked = page.locator('[role="treeitem"]:focus');
+  await expect(picked).toHaveAttribute('aria-level', '2');
+  const pickedWord = /^Guess 2: ([A-Z]{5}):/.exec((await picked.getAttribute('aria-label')) ?? '')![1].toLowerCase();
+  await page.keyboard.press('Shift+Enter');
+  await waitForLevel(page, 0);
+  state = await replayState(page);
+  expect(state.active).toBe(true);
+  expect(state.guesses.slice(0, 2)).toEqual([OPENER, pickedWord]);
+  expect(state.cursor).toBe(state.guesses.length);
+  await expect(slider).toHaveAttribute('aria-valuenow', String(state.guesses.length));
   expect(errors).toEqual([]);
 });

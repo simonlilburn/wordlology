@@ -3,7 +3,7 @@
 // that fill in the background (the target browser's thumbnails, toasts,
 // computing status) are masked. Regenerate with `npx playwright test levels --update-snapshots`.
 import { expect, test, type Page } from '@playwright/test';
-import { OPENER, TARGET, openGameAgainst, playWord, settleFrames, waitForBoardIdle, waitForCard, waitForLevel, waitForTree } from './helpers';
+import { OPENER, TARGET, openGameAgainst, playWord, waitForBoardIdle, waitForCard, waitForLevel, waitForSceneIdle, waitForTree } from './helpers';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
@@ -31,19 +31,19 @@ test('each level matches its screenshot', async ({ page }) => {
   await waitForLevel(page, 1);
   await waitForTree(page);
   await page.waitForFunction(() => window.__wordlology!.app.focus.node >= 0);
-  await settleFrames(page);
+  await waitForSceneIdle(page);
   await expect(page).toHaveScreenshot('tree.png', { mask: volatile(page), timeout: 30_000 });
 
   // Card: the complete card for info-proportional with CRANE.
   await page.keyboard.press('-');
   await waitForLevel(page, 2);
   await waitForCard(page);
-  await settleFrames(page);
+  await waitForSceneIdle(page);
   await expect(page).toHaveScreenshot('card.png', { mask: volatile(page), timeout: 30_000 });
 
   // Atlas: a one-cell grid with its headers and dashed add cards.
   await page.keyboard.press('-');
   await waitForLevel(page, 3);
-  await settleFrames(page);
+  await waitForSceneIdle(page);
   await expect(page).toHaveScreenshot('atlas.png', { mask: volatile(page), timeout: 30_000 });
 });

@@ -58,6 +58,13 @@ async function exportAndCheck(
       expect(cfg.hard_mode).toBe('FALSE');
       expect(cfg.exported_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
       if ('complete' in cfg) expect(cfg.complete).toBe('TRUE');
+      expect(cfg.word_list_id).toBe('open-en-5');
+      expect(cfg.replicates).toBe(level === 'tree' ? '200' : '20');
+      expect(cfg.base_seed).toBe('1');
+      expect(cfg.filter).toBe('NA');
+      expect(cfg.solver_version).not.toMatch(/^(NA|)$/);
+      expect(cfg.app_version).not.toMatch(/^(NA|)$/);
+      expect(() => JSON.parse(cfg.strategy_json)).not.toThrow();
     } else {
       expect(header, name).toEqual(want);
     }
@@ -228,8 +235,32 @@ test('play → tree → card → atlas → export', async ({ page, context }) =>
   const player = tg.rows.filter((r) => r[col('is_player')] === 'TRUE');
   expect(player.map((r) => r[col('path')])).toContain(`${OPENER}>${TARGET}`);
   expect(tg.rows.length - player.length).toBe(tree.strategyGames);
+  // Conventions: n_guesses counts guesses, outcome is 1–6 or X, path joins lowercase guesses with ">".
+  for (const r of tg.rows) {
+    const path = r[col('path')].split('>');
+    const n = Number(r[col('n_guesses')]);
+    expect(path.length).toBe(n);
+    for (const w of path) expect(w).toMatch(/^[a-z]{5}$/);
+    expect(['TRUE', 'FALSE']).toContain(r[col('solved')]);
+    expect(r[col('outcome')]).toBe(r[col('solved')] === 'TRUE' ? String(n) : 'X');
+    if (r[col('solved')] === 'TRUE') expect(path[path.length - 1]).toBe(TARGET);
+  }
+  const plays = csvRows(treeExport.files['plays.csv']);
+  const pc = (name: string) => plays.header.indexOf(name);
+  const turns = tg.rows.reduce((sum, r) => sum + Number(r[col('n_guesses')]), 0);
+  expect(plays.rows.length).toBe(turns);
+  for (const r of plays.rows.slice(0, 200)) {
+    expect(r[pc('feedback')]).toMatch(/^[gyb]{5}$/);
+    expect(r[pc('guess')]).toMatch(/^[a-z]{5}$/);
+  }
+  const firstPlay = plays.rows.find((r) => r[pc('turn')] === '1')!;
+  expect(firstPlay[pc('guess')]).toBe(OPENER);
+  expect(firstPlay[pc('feedback')]).toBe('bbgbg');
   const nodes = csvRows(treeExport.files['nodes.csv']);
   expect(nodes.rows.length).toBeGreaterThan(2);
+  const treeDist = csvRows(treeExport.files['distribution.csv']);
+  const shareSum = treeDist.rows.reduce((sum, r) => sum + Number(r[treeDist.header.indexOf('share')]), 0);
+  expect(shareSum).toBeCloseTo(1, 4);
 
   // The side pane's Copy R code copies the snippet for the latest export.
   await page.evaluate(() => navigator.clipboard.writeText(''));

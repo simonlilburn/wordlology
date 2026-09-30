@@ -2,20 +2,20 @@
 // transitions with short cross-fades. The journey runs again quickly and each
 // level change must finish within about 300 ms.
 import { expect, test, type Page } from '@playwright/test';
+import { OPENER, TARGET, openGameAgainst, playWord, row, trackPageErrors, waitForLevel, waitForTree } from './helpers';
 
 // Node's environment (the web app's tsconfig has no Node types).
 const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
-import { OPENER, TARGET, openGameAgainst, playWord, row, trackPageErrors, waitForLevel, waitForTree } from './helpers';
 
 test.use({ contextOptions: { reducedMotion: 'reduce' } });
 
 /**
- * Allowed animation time from a level change (zTarget moves) until z arrives.
- * Measured as the sum of frame intervals, capped as the zoom animation caps
- * them (16 ms for the first frame, then 64 ms): SwiftShader renders some frames in several hundred
- * milliseconds, so wall-clock time is recorded (as an annotation) but only
- * asserted with E2E_STRICT_TIMING=1 on machines with a GPU. The default
- * spring needs well over a second of animation time for one level.
+ * Allowed animation time from a level change (zTarget moves) until z arrives,
+ * measured as the zoom animation measures it: the sum of frame intervals, the
+ * first counted as 16 ms and each later one capped at 64 ms. SwiftShader can
+ * take several hundred milliseconds for a frame, so wall-clock time is
+ * recorded (as an annotation) but only asserted with E2E_STRICT_TIMING=1 on
+ * machines with a GPU. The default spring needs over a second for one level.
  */
 const TRANSITION_BUDGET_MS = 300;
 const STRICT_WALL_CLOCK = env.E2E_STRICT_TIMING === '1';
@@ -39,17 +39,22 @@ async function startTransitionLog(page: Page): Promise<void> {
     const app = window.__wordlology!.app;
     let target = app.zTarget;
     const tick = (now: number) => {
+      // This callback runs before the zoom animation's in each frame, so z here
+      // reflects the animation's steps up to the previous frame.
       const cur = w.__e2eTransitions[w.__e2eTransitions.length - 1];
       if (cur && cur.end === null) {
-        // The zoom animation counts its first frame as 16 ms and caps later ones at 64 ms.
-        cur.anim += Math.min(cur.frames === 0 ? 16 : 64, now - cur.last);
-        cur.last = now;
-        cur.frames++;
-        if (app.z === cur.to) cur.end = now;
+        if (app.z === cur.to) cur.end = cur.last;
+        else {
+          // The animation caps each frame's step at 64 ms.
+          cur.anim += Math.min(64, now - cur.last);
+          cur.last = now;
+          cur.frames++;
+        }
       }
       if (app.zTarget !== target) {
         const done = app.z === app.zTarget;
-        w.__e2eTransitions.push({ from: target, to: app.zTarget, start: now, last: now, anim: 0, frames: 0, end: done ? now : null });
+        // The animation's first frame counts as 16 ms.
+        w.__e2eTransitions.push({ from: target, to: app.zTarget, start: now, last: now, anim: 16, frames: 1, end: done ? now : null });
         target = app.zTarget;
       }
       requestAnimationFrame(tick);

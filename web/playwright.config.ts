@@ -25,7 +25,7 @@ export default defineConfig({
     toHaveScreenshot: {
       // SwiftShader WebGL and font hinting differ slightly between machines.
       maxDiffPixelRatio: 0.01,
-      threshold: 0.3,
+      threshold: 0.2,
       animations: 'disabled',
       caret: 'hide',
       scale: 'css',
