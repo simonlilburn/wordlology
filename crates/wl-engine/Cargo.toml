@@ -14,3 +14,4 @@ blake3 = { workspace = true }
 rand = { workspace = true }
 rand_chacha = { workspace = true }
 thiserror = { workspace = true }
+sha2 = { version = "0.10", default-features = false }

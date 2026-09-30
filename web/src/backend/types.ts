@@ -128,6 +128,8 @@ export const PHASE_PLAYER = 254;
 export interface GameBatchEvent {
   type: 'games';
   games: Game[];
+  /** The encoded batch the games came from, when available (the cache stores it as is). */
+  buffer?: ArrayBuffer;
 }
 
 export interface ProgressEvent {

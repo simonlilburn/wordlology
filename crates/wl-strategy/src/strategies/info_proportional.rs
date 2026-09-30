@@ -1,5 +1,6 @@
-use wl_core::{expected_info, math, WordId};
+use wl_core::{math, WordId};
 
+use crate::info::InfoScorer;
 use crate::schema::{ParamField, ParamSchema, ParamType};
 use crate::spec::Pool;
 use crate::{rank_scores, Ctx, Dist, Resources, State, StateKey, Strategy};
@@ -17,9 +18,9 @@ impl InfoProportional {
     }
 
     fn infos(&self, ctx: &Ctx, state: &State) -> (Vec<WordId>, Vec<f64>) {
-        let mut scratch = ctx.scratch();
+        let mut scorer = InfoScorer::new(ctx.matrix, &state.candidates);
         let words = ctx.pool_words(state, self.pool);
-        let infos = words.iter().map(|&w| expected_info(ctx.matrix, w, &state.candidates, &mut scratch)).collect();
+        let infos = words.iter().map(|&w| scorer.score(ctx.matrix, w)).collect();
         (words, infos)
     }
 }
@@ -42,7 +43,15 @@ impl Strategy for InfoProportional {
         let weights: Vec<f64> = if self.beta == 0.0 {
             vec![1.0; words.len()]
         } else {
-            infos.iter().map(|&i| if i > 0.0 { math::pow(i, self.beta) } else { 0.0 }).collect()
+            let w: Vec<f64> = infos.iter().map(|&i| if i > 0.0 { math::pow(i, self.beta) } else { 0.0 }).collect();
+            if w.iter().sum::<f64>().is_finite() {
+                w
+            } else {
+                // I^beta overflowed (beta in the hundreds): scale by the
+                // largest I first, which leaves the distribution unchanged.
+                let max = infos.iter().copied().fold(0.0, f64::max);
+                infos.iter().map(|&i| if i > 0.0 { math::pow(i / max, self.beta) } else { 0.0 }).collect()
+            }
         };
         Dist::from_weights(&words, &weights, 0)
     }

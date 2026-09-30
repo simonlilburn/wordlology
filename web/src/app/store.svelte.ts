@@ -7,7 +7,7 @@
 // (game, tree, card, atlas, lab, ui, ...). Shared fields at the top level are
 // changed only through the helpers in app/actions.ts.
 
-import type { Config, StrategySpec } from '../backend/types';
+import type { Config, Preset, StrategySchema, StrategySpec } from '../backend/types';
 import type { WordData } from '../model/types';
 
 export type Level = 0 | 1 | 2 | 3;
@@ -18,7 +18,8 @@ export interface ResultSettings {
   maxGuesses: number;
   hardMode: boolean;
   /** Default: the 2,500 most frequent reviewed answers. */
-  answers: { kind: 'default' } | { kind: 'top'; n: number } | { kind: 'pasted'; words: string[] };
+  /** Pasted lists keep the sha256 of their sorted words (set by app/settings.ts setPastedAnswers). */
+  answers: { kind: 'default' } | { kind: 'top'; n: number } | { kind: 'pasted'; words: string[]; sha256?: string };
   arrivalStrategy: StrategySpec;
   /** Guess pool for information-based stochastic strategies. */
   stochasticPool: 'candidates' | 'allowed';
@@ -123,6 +124,14 @@ export const app = $state({
   loadError: null as string | null,
   /** Solver ready (workers loaded the list and built the pattern matrix). */
   solverReady: false,
+  /** Solver catalogue from the backend's capabilities (filled by app/init.ts). */
+  catalogue: {
+    solverVersion: '',
+    presets: [] as Preset[],
+    schemas: [] as StrategySchema[],
+  },
+  /** First arrival done: the player finished a game (or a link set the configuration). */
+  arrived: false,
 
   result: structuredClone(DEFAULT_RESULT) as ResultSettings,
   display: structuredClone(DEFAULT_DISPLAY) as DisplaySettings,

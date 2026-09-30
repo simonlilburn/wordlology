@@ -114,8 +114,11 @@ export interface CardSnapshot {
   p95: number;
   solveRate: number;
   nGames: number;
+  /** Targets with at least one game (the first replicate pass: "640 / 2,315 targets"). */
   nTargetsDone: number;
   nTargets: number;
+  /** Games the run will play in total (targets × replicates). */
+  nGamesTotal?: number;
   complete: boolean;
   deterministic: boolean;
   /** Deterministic progressive fill. */

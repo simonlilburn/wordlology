@@ -3,18 +3,47 @@
 //!
 //! A strategy maps a game state to a probability distribution over guesses; a
 //! deterministic strategy puts all its mass on one word.
+//!
+//! Build a strategy from its JSON spec with [`StrategySpec::build`]. The
+//! catalogue (see docs/specification.md, "Strategy Lab and catalogue"):
+//!
+//! | kind | module | kind of choice |
+//! | --- | --- | --- |
+//! | `max_info` | [`strategies::MaxInfo`] | deterministic |
+//! | `most_frequent` | [`strategies::MostFrequent`] | deterministic |
+//! | `fixed_sequence` | [`strategies::FixedSequence`] | deterministic |
+//! | `random` | [`strategies::Random`] | stochastic |
+//! | `info_proportional` | [`strategies::InfoProportional`] | stochastic |
+//! | `freq_proportional` | [`strategies::FreqProportional`] | stochastic |
+//! | `coverage_then` | [`strategies::Coverage`] in a [`strategies::Switch`] | hybrid |
+//! | `sequence_then` | [`strategies::FixedSequence`] in a [`strategies::Switch`] | hybrid |
+//! | `switch` | [`strategies::Switch`] | combinator |
+//! | `mixture` | [`strategies::Mixture`] | combinator |
+//! | `solve_when_le` | [`strategies::SolveWhenLe`] | modifier |
+//!
+//! **Phases.** [`Strategy::phases`] lists a flattened label per part (for
+//! example `["coverage", "max_info"]`), and every [`DistEntry::phase`] indexes
+//! into it; combinators offset their children's phases.
+//!
+//! **Hard mode** (`ctx.rules.hard_mode`) is enforced by every strategy: none
+//! returns a guess that violates [`wl_core::hard_mode_ok`] for the history.
+//! Candidates always satisfy it; allowed-pool strategies use
+//! [`Ctx::allowed_words`]; fixed sequences skip listed words that are invalid.
 
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use wl_core::{hard_mode_ok, CandidateSet, Pattern, PatternMatrix, WordId, WordList};
 
 pub mod catalogue;
+pub mod cost;
+pub mod info;
 pub mod schema;
 pub mod spec;
 pub mod strategies;
 
+pub use cost::estimated_ops_per_state;
 pub use schema::{ParamField, ParamSchema, ParamType};
-pub use spec::{Pool, StrategySpec, SwitchRule};
+pub use spec::{BuildError, Pool, StrategySpec, SwitchRule};
 
 /// Game rules. Word length comes from the word list.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -75,6 +104,11 @@ impl<'a> Ctx<'a> {
     pub fn is_candidate(&self, state: &State, g: WordId) -> bool {
         self.list.answer_idx(g).is_some_and(|a| state.candidates.contains(a))
     }
+
+    /// The candidate with the lowest word id (the deterministic fallback guess).
+    pub fn first_candidate(&self, state: &State) -> WordId {
+        state.candidates.iter().map(|a| self.list.answer_word(a)).min().expect("no candidates")
+    }
 }
 
 /// A game state: the candidate set, the number of guesses made so far, and
@@ -130,6 +164,25 @@ impl StateKey {
     pub fn mix(self, tag: u64) -> StateKey {
         StateKey(self.0.rotate_left(17) ^ tag.wrapping_mul(0x9e37_79b9_7f4a_7c15), self.1 ^ tag)
     }
+
+    /// Combine two keys, for combinators whose choice depends on several
+    /// parts. Order matters: `a.combine(b)` and `b.combine(a)` differ.
+    pub fn combine(self, other: StateKey) -> StateKey {
+        StateKey(
+            mix64(self.0 ^ mix64(other.0 ^ 0x243f_6a88_85a3_08d3)) ^ other.1,
+            mix64(self.1 ^ mix64(other.1 ^ 0x1319_8a2e_0370_7344)) ^ other.0.rotate_left(32),
+        )
+    }
+}
+
+/// The splitmix64 finaliser: a cheap, well-mixing bijection on u64.
+#[inline]
+fn mix64(mut x: u64) -> u64 {
+    x ^= x >> 30;
+    x = x.wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    x ^= x >> 27;
+    x = x.wrapping_mul(0x94d0_49bb_1331_11eb);
+    x ^ (x >> 31)
 }
 
 /// One entry of a guess distribution: a word, its probability, and which
@@ -260,6 +313,20 @@ pub trait Strategy: Send + Sync {
     /// Resources the strategy needs from the word list.
     fn resources(&self) -> Resources {
         Resources::default()
+    }
+    /// Whether a sequence-playing strategy has run out of listed words at
+    /// this state; drives [`SwitchRule::SequenceExhausted`]. It must be a
+    /// function of [`Strategy::state_key`]. Strategies without a sequence
+    /// never run out.
+    fn exhausted(&self, _ctx: &Ctx, _state: &State) -> bool {
+        false
+    }
+}
+
+impl Resources {
+    /// Resources needed by either of two parts.
+    pub fn union(self, other: Resources) -> Resources {
+        Resources { frequencies: self.frequencies || other.frequencies }
     }
 }
 
