@@ -22,12 +22,14 @@ import {
   approachViewport,
   clampToBounds,
   expectedViewport,
+  flipPulse,
   occlusionOf,
   fitCamera,
   fitScale,
   homeCamera,
   layoutScale,
   MAX_SCALE,
+  screenToWorld as camToWorld,
   worldToScreen as camToScreen,
   zoomAt,
   type Bounds,
@@ -39,8 +41,8 @@ import { registerTreeControls, playNode } from './controls';
 import { drawTree, nodeGeom, type GeomCache } from './draw';
 import { computeTreeFilter, revealMatchIds, type TreeFilter } from './filtering';
 import { ellipsisSlotPx, hitTest, type Hit } from './geom';
-import { growthTiming, advanceClock, revealCount, type GrowthTiming } from './growth';
-import { extendHeaviest, layoutTree, pathOf, type Layout, type LayoutParams } from './layout';
+import { growthStep, growthTiming, type GrowthTiming } from './growth';
+import { extendHeaviest, layoutTree, pathOf, revealedLayout, type Layout, type LayoutParams } from './layout';
 import { Morph, type DNode } from './morph';
 import { RevealState } from './reveal';
 import { CHOREO, measureBoard, rowProgress, smoothstep, type BoardRow } from './transition';
@@ -121,9 +123,10 @@ class TreeLayer implements SceneLayer {
   private tree: TargetTree | null = null;
   private treeVersion = -1;
   private reveal: RevealState | null = null;
-  private growth: { phase: GrowthPhase; clock: number; stalled: boolean; timing: GrowthTiming | null; fadeStart: number } = {
+  private growth: { phase: GrowthPhase; clock: number; skipped: number; stalled: boolean; timing: GrowthTiming | null; fadeStart: number } = {
     phase: 'done',
     clock: 0,
+    skipped: 0,
     stalled: false,
     timing: null,
     fadeStart: -Infinity,
@@ -143,8 +146,12 @@ class TreeLayer implements SceneLayer {
   private filterData: TreeFilter | null = null;
   private filterDataKey = '';
 
-  // Layout.
+  // Layout: the full layout of every computed game, and the part of it on screen.
+  private baseLayout: Layout | null = null;
   private layout: Layout | null = null;
+  private revealKey = -1;
+  private isolateKey = '';
+  private isolateMass: Float64Array | null = null;
   private structKey = '';
   private dataKey = '';
   private lastLayoutAt = -Infinity;
@@ -344,6 +351,7 @@ class TreeLayer implements SceneLayer {
 
     // Geometry.
     if (this.reveal?.drawing(this.now)) animating = true;
+    if (flipPulse(this.now - this.pulseStart, TARGET_MORPH_MS) < 1) animating = true;
     if (f.reducedMotion && this.now - this.growth.fadeStart < 220) animating = true;
     this.draw(f, ctx, z);
     this.publish(f, ctx, z);
@@ -378,8 +386,10 @@ class TreeLayer implements SceneLayer {
       this.filterDataKey = '';
       this.playerScanVersion = -1;
       this.layout = null;
+      this.baseLayout = null;
       this.structKey = '';
       this.dataKey = '';
+      this.revealKey = -1;
       if (!tree) {
         this.reveal = null;
         this.morph.clear();
@@ -391,12 +401,13 @@ class TreeLayer implements SceneLayer {
       const timing = growthTiming(mode);
       // Grow after the Game → Tree transition; otherwise show the games as they are computed.
       const grow = fromGame && app.z < 0.98 && !!timing && !f.reducedMotion;
-      this.growth = { phase: grow ? 'pending' : 'done', clock: 0, stalled: false, timing, fadeStart: f.reducedMotion ? this.now : -Infinity };
+      this.growth = { phase: grow ? 'pending' : 'done', clock: 0, skipped: 0, stalled: false, timing, fadeStart: f.reducedMotion ? this.now : -Infinity };
       // A new target morphs from the old tree (the root stays anchored); otherwise start fresh.
       const morphing = !!old && app.z > 0.5 && !f.reducedMotion;
       if (!morphing) this.morph.clear();
       this.morphDur = morphing ? TARGET_MORPH_MS : 0;
       this.morphArrival = morphing;
+      if (morphing && old && old.target !== tree.target) this.pulseStart = this.now;
     }
     if (!tree) return;
     if (tree.version !== this.treeVersion) {
@@ -410,6 +421,8 @@ class TreeLayer implements SceneLayer {
   private morphDur = 0;
   /** The next layout is the first of a tree that morphs in from another target. */
   private morphArrival = false;
+  /** When the last target flip started (the shrink-and-grow pulse). */
+  private pulseStart = -Infinity;
 
   private trunkGuesses(tree: TargetTree): number[] {
     const id = app.focus.node;
@@ -453,27 +466,15 @@ class TreeLayer implements SceneLayer {
       if (app.z >= 0.98 && !app.zDragging) {
         g.phase = 'running';
         g.clock = 0;
+        g.skipped = 0;
       } else return false;
     }
     if (g.phase === 'running' && g.timing) {
       const total = this.runTotal(tree);
-      const res = advanceClock(g.clock, f.dt, total, r.available, this.runDone(), g.timing);
-      g.clock = res.clock;
-      g.stalled = res.stalled;
-      let want = revealCount(g.clock, total, g.timing);
-      while (r.count < want) {
-        const i = r.count;
-        const first = i < g.timing.firstCount;
-        const drawMs = first ? g.timing.drawFirstMs : g.timing.drawLaterMs;
-        if (!r.revealNext(this.now, drawMs)) break;
-        // A slow, one-at-a-time slot is only worth spending on a game that
-        // adds something to the picture: one that retraces paths already on
-        // screen (the trunk, at first) passes straight to the next game.
-        if (first && r.lastFresh === 0 && r.count < total) {
-          g.clock = Math.max(g.clock, r.count * g.timing.firstMs);
-          want = revealCount(g.clock, total, g.timing);
-        }
-      }
+      const timing = g.timing;
+      growthStep(g, f.dt, total, r.count, r.available, this.runDone(), timing, (first) =>
+        r.revealNext(this.now, first ? timing.drawFirstMs : timing.drawLaterMs) ? r.lastFresh : null,
+      );
       if (r.count >= total || (this.runDone() && r.pending === 0 && r.count >= r.available)) {
         g.phase = 'done';
         g.stalled = false;
@@ -500,7 +501,7 @@ class TreeLayer implements SceneLayer {
 
   // --------------------------------------------------------------- filter
 
-  private updateFilter(tree: TargetTree, massOf: (n: TrieNode) => number, solvedCode: number): TreeFilter | null {
+  private updateFilter(tree: TargetTree, solvedCode: number): TreeFilter | null {
     const words = app.words!;
     const st = app.filter;
     const key = st ? `${st.text}|${st.combine}|${st.mode}|${st.rows.join(',')}|${st.includeFinal}|${app.display.yIsVowel}|${words.wordLength}` : '';
@@ -519,12 +520,12 @@ class TreeLayer implements SceneLayer {
       this.filterData = null;
       return null;
     }
-    const dk = `${key}|${tree.version}|${this.reveal?.count ?? 0}`;
+    const dk = `${key}|${tree.version}`;
     if (dk !== this.filterDataKey) {
       this.filterDataKey = dk;
       const g = words.guesses;
       try {
-        this.filterData = computeTreeFilter(tree.root, tree.nodes.length, (n) => matchesNode(cf, g[n.guess] ?? '', n.depth, isFinalGuess(n, solvedCode)), cf.mode, app.result.maxGuesses, massOf);
+        this.filterData = computeTreeFilter(tree.root, tree.nodes.length, (n) => matchesNode(cf, g[n.guess] ?? '', n.depth, isFinalGuess(n, solvedCode)), cf.mode, app.result.maxGuesses);
       } catch {
         this.filterData = null;
       }
@@ -570,10 +571,12 @@ class TreeLayer implements SceneLayer {
     const tree = this.tree!;
     const r = this.reveal!;
     const params = this.layoutParams(tree);
-    const massOfReveal = r.massOf;
-    const filter = this.updateFilter(tree, massOfReveal, params.solvedCode);
-    const isolate = filter && filter.mode === 'isolate';
-    const massOf = isolate ? (n: TrieNode) => filter.fmass[n.id] ?? 0 : massOfReveal;
+    const filter = this.updateFilter(tree, params.solvedCode);
+    const isolate = !!filter && filter.mode === 'isolate';
+    // Structure and places come from every game computed so far, so nothing
+    // moves while the growth animation reveals them; what is drawn is the
+    // part of that layout the revealed games reach.
+    const massOf = isolate ? (n: TrieNode) => filter.fmass[n.id] ?? 0 : (n: TrieNode) => n.mass;
     // Trunk: the selected path (or the player's), extended along the heaviest children.
     const id = app.focus.node;
     let base: TrieNode[] = [];
@@ -604,23 +607,34 @@ class TreeLayer implements SceneLayer {
       forced.length,
       app.display.labelThreshold,
     ].join('|');
-    const dataKey = `${tree.version}|${r.count}|${params.totalGames}`;
+    const dataKey = `${tree.version}|${params.totalGames}`;
+    const revealKey = r.count;
     const structChanged = structKey !== this.structKey;
     const dataChanged = dataKey !== this.dataKey;
-    if (!structChanged && !dataChanged && this.layout) return false;
+    const revealChanged = revealKey !== this.revealKey;
+    if (!structChanged && !dataChanged && !revealChanged && this.layout) return false;
     if (!structChanged && this.layout && this.now - this.lastLayoutAt < DATA_RELAYOUT_MS) return false;
-    const advance = this.atlas.metrics.advance;
-    const threshold = app.display.labelThreshold;
-    const layout = layoutTree({
-      root: tree.root,
-      params,
-      massOf,
-      trunk,
-      forced,
-      expanded: this.expanded,
-      matchesBelow: filter ? (n) => filter.below[n.id] ?? 0 : undefined,
-      ellipsisPx: (count, games) => ellipsisSlotPx(count, games, advance, threshold, fmtInt),
-    });
+    if (structChanged || dataChanged || !this.baseLayout) {
+      const advance = this.atlas.metrics.advance;
+      const threshold = app.display.labelThreshold;
+      this.baseLayout = layoutTree({
+        root: tree.root,
+        params,
+        massOf,
+        trunk,
+        forced,
+        expanded: this.expanded,
+        matchesBelow: filter ? (n) => filter.below[n.id] ?? 0 : undefined,
+        ellipsisPx: (count, games) => ellipsisSlotPx(count, games, advance, threshold, fmtInt),
+      });
+    }
+    const full = this.baseLayout;
+    const keep = new Set<number>();
+    for (const n of trunk) keep.add(n.id);
+    for (const n of this.playerLeaves) for (let x: TrieNode | null = n; x; x = x.parent) keep.add(x.id);
+    if (id >= 0 && id < tree.nodes.length) for (let x: TrieNode | null = tree.nodes[id]; x; x = x.parent) keep.add(x.id);
+    const shownMass = isolate ? this.revealedIsolateMass(tree, filter) : r.massOf;
+    const layout = revealedLayout(full, shownMass, (n) => keep.has(n.id));
     const first = !this.layout;
     if (this.morphArrival) {
       // Nodes on screen in both trees (the shared root and opener, common
@@ -636,13 +650,14 @@ class TreeLayer implements SceneLayer {
     this.trunkIds = trunk.map((n) => n.id);
     this.structKey = structKey;
     this.dataKey = dataKey;
+    this.revealKey = revealKey;
     this.lastLayoutAt = this.now;
     let dur = structChanged ? MORPH_MS : GROWTH_MORPH_MS;
     if (first) dur = this.morphDur;
     if (f.reducedMotion) dur = 0;
     this.morph.setLayout(layout, this.now, dur);
     this.morphDur = MORPH_MS;
-    this.boundsCur = { minX: layout.minX, maxX: layout.maxX, top: layout.top, bottom: layout.bottom };
+    this.boundsCur = { minX: full.minX, maxX: full.maxX, top: full.top, bottom: full.bottom };
     const anchor = this.anchor;
     this.anchor = null;
     if (anchor) {
@@ -654,10 +669,24 @@ class TreeLayer implements SceneLayer {
         this.setCam({ ...base, cx: born[0].x - (anchor.sx - vx) / base.s }, true);
       }
     }
-    setTreeBounds({ x: layout.minX, y: layout.bottom, width: layout.maxX - layout.minX, height: layout.top - layout.bottom });
+    setTreeBounds({ x: full.minX, y: full.bottom, width: full.maxX - full.minX, height: full.top - full.bottom });
     if (this.pinned && !layout.byKey.has(this.pinned.key)) this.pinned = null;
     if (this.hover && !layout.byKey.has(this.hover.key)) this.hover = null;
     return true;
+  }
+
+  /** Isolate mode while games are still being revealed: revealed games through each node that touch a match. */
+  private revealedIsolateMass(tree: TargetTree, filter: TreeFilter): (n: TrieNode) => number {
+    const r = this.reveal!;
+    if (r.count >= tree.totalMass) return (n) => filter.fmass[n.id] ?? 0;
+    const key = `${this.filterDataKey}|${r.count}`;
+    if (key !== this.isolateKey || !this.isolateMass) {
+      this.isolateKey = key;
+      const m = filter.match;
+      this.isolateMass = computeTreeFilter(tree.root, tree.nodes.length, (n) => m[n.id] === 1, 'isolate', app.result.maxGuesses, r.massOf).fmass;
+    }
+    const fm = this.isolateMass;
+    return (n) => fm[n.id] ?? 0;
   }
 
   // --------------------------------------------------------------- camera
@@ -670,9 +699,20 @@ class TreeLayer implements SceneLayer {
     const o = ctx.ortho;
     const W = this.width;
     const H = this.height;
-    const c = this.cam;
+    let c = this.cam;
     const vx = this.vp.left + this.vp.width / 2;
     const vy = this.vp.top + this.vp.height / 2;
+    const k = flipPulse(this.now - this.pulseStart, TARGET_MORPH_MS);
+    if (k < 1 && this.layout) {
+      // Flipping targets: the tree shrinks toward the target strip and grows
+      // back as the new target's tree, about its root (which stays put).
+      const rx = 0;
+      const ry = this.layout.root.y;
+      const sx = vx + (rx - c.cx) * c.s;
+      const sy = vy - (ry - c.cy) * c.s;
+      const s1 = c.s * k;
+      c = { cx: rx - (sx - vx) / s1, cy: ry + (sy - vy) / s1, s: s1 };
+    }
     o.left = -W / 2;
     o.right = W / 2;
     o.top = H / 2;
@@ -704,9 +744,41 @@ class TreeLayer implements SceneLayer {
       setLevel(2);
       return;
     }
+    // Zoom about the centre of the view, or about the nearest part of the
+    // tree when the centre is empty (below a shallow tree, beside a narrow one).
     const v = { x: this.vp.left + this.vp.width / 2, y: this.vp.top + this.vp.height / 2 };
-    const { cam } = zoomAt(base, this.vp, factor, v.x, v.y, minS);
+    const cb = this.contentBounds();
+    let a = v;
+    if (cb) {
+      // The centre of the part of the tree in view.
+      const tl = camToWorld(base, this.vp, this.vp.left, this.vp.top);
+      const br = camToWorld(base, this.vp, this.vp.left + this.vp.width, this.vp.top + this.vp.height);
+      const x0 = Math.max(cb.minX, tl.x);
+      const x1 = Math.min(cb.maxX, br.x);
+      const y0 = Math.max(cb.bottom, br.y);
+      const y1 = Math.min(cb.top, tl.y);
+      const w = camToWorld(base, this.vp, v.x, v.y);
+      const ax = x1 >= x0 ? (x0 + x1) / 2 : w.x;
+      const ay = y1 >= y0 ? (y0 + y1) / 2 : w.y;
+      a = camToScreen(base, this.vp, ax, ay);
+    }
+    const { cam } = zoomAt(base, this.vp, factor, a.x, a.y, minS);
     this.setCam(cam, true);
+  }
+
+  /** World extent of the nodes on screen (the drawn part of the tree). */
+  private contentBounds(): Bounds | null {
+    const L = this.layout;
+    if (!L || !L.nodes.length) return null;
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let bottom = Infinity;
+    for (const n of L.nodes) {
+      if (n.x < minX) minX = n.x;
+      if (n.x > maxX) maxX = n.x;
+      if (n.y < bottom) bottom = n.y;
+    }
+    return { minX, maxX, top: L.top, bottom: bottom - L.params.bandHeight / 2 };
   }
 
   private fit(): void {
@@ -971,6 +1043,7 @@ class TreeLayer implements SceneLayer {
       this.reveal?.drawing(this.now) ? this.now : 0,
       this.structKey,
       this.dataKey,
+      this.revealKey,
       pal.key,
       hs.key,
       [...hs.ids].length ? [...hs.ids][0] : -1,
@@ -1130,7 +1203,7 @@ class TreeLayer implements SceneLayer {
         const gm = this.geomCache.get(d);
         const hh = gm ? (gm.h * this.cam.s) / 2 : 12;
         const hidden = ref.kind === 'ellipsis' ? { count: d.l.hidden?.length ?? 0, games: d.l.hiddenMass, matches: d.l.hiddenMatches } : undefined;
-        setTooltip({ node: ref.node, kind: ref.kind, x: p.x, y: p.y + hh, pinned: ref === this.pinned && !this.hover, hidden });
+        setTooltip({ node: ref.node, kind: ref.kind, x: p.x, y: p.y + hh, top: p.y - hh, pinned: ref === this.pinned && !this.hover, hidden });
       } else setTooltip(null);
     } else setTooltip(null);
     // Minimap.
@@ -1140,7 +1213,7 @@ class TreeLayer implements SceneLayer {
     const fv = this.fullVp;
     const tl = this.screenWorld(fv.left, fv.top);
     const br = this.screenWorld(fv.left + fv.width, fv.top + fv.height);
-    const sk = `${this.structKey}|${this.dataKey}|${this.morph.animating ? 1 : 0}`;
+    const sk = `${this.structKey}|${this.dataKey}|${this.revealKey}|${this.morph.animating ? 1 : 0}`;
     const bump = overflow && sk !== this.silhouetteKey && !this.morph.animating;
     if (bump) {
       this.silhouetteKey = sk;

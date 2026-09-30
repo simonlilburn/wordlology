@@ -16,9 +16,10 @@
 //! For larger candidate sets and u8 rows (words of up to five letters) it
 //! switches to a laned kernel: four interleaved histograms (so runs of
 //! candidates in the same bucket do not wait on each other's increments),
-//! summed afterwards, with the buckets holding two or more candidates found
-//! by a branch-free scan four buckets at a time. The terms are still added in
-//! increasing pattern order, so the result is the same bit for bit.
+//! summed afterwards four buckets at a time in u64s, which also find the
+//! buckets holding two or more candidates with a branch-free scan. The terms
+//! are still added in increasing pattern order, so the result is the same bit
+//! for bit.
 //!
 //! Over the allowed pool, [`Equivalence`] groups guesses that give the same
 //! feedback on every candidate, so each group is scored once (with few
@@ -32,7 +33,7 @@ use wl_core::{math, AnswerIdx, CandidateSet, PatternMatrix, Row, WordId, WordLis
 use crate::{Ctx, State};
 
 /// Candidate sets at least this large use the laned kernel (for u8 rows).
-/// Below it, the fixed cost of summing and scanning 256 buckets per guess
+/// Below it, the fixed cost of summing and scanning every bucket per guess
 /// outweighs what the lanes save.
 const LANED_MIN: usize = 64;
 
@@ -55,8 +56,15 @@ pub struct InfoScorer {
 struct Lanes {
     /// Four histograms; candidate i is counted in histogram i mod 4.
     hist: [[u16; 256]; 4],
-    /// Their sum: the count of each pattern.
-    sum: [u16; 256],
+    /// Quads of patterns that can occur (3^L / 4, rounded up).
+    quads: usize,
+}
+
+/// Four consecutive u16 counts as one u64, count j in bits 16j.. (the
+/// compiler turns this into a single load).
+#[inline(always)]
+fn quad(c: &[u16]) -> u64 {
+    u64::from(c[0]) | u64::from(c[1]) << 16 | u64::from(c[2]) << 32 | u64::from(c[3]) << 48
 }
 
 impl Lanes {
@@ -74,30 +82,30 @@ impl Lanes {
         for &a in quads.remainder() {
             h0[row[a as usize] as usize] += 1;
         }
-        // Counts fit a u16 (at most u16::MAX candidates), so the sum never wraps.
-        for p in 0..256 {
-            self.sum[p] = h0[p].wrapping_add(h1[p]).wrapping_add(h2[p]).wrapping_add(h3[p]);
-        }
-        self.hist = [[0; 256]; 4];
-        // Bitmap of the buckets holding two or more candidates, four u16
-        // counts at a time: clear bit 0 of each count, then set bit 15 of
-        // each non-zero count without carrying into the next, and gather
-        // those four bits into a nibble with one multiplication.
+        // Four patterns at a time: add the histograms as u64s (each count is
+        // at most u16::MAX, the candidate limit, so no lane carries into the
+        // next), then mark the counts of two or more: clear bit 0 of each,
+        // set bit 15 of each non-zero one without carrying, and gather those
+        // four bits into a nibble with one multiplication.
+        let mut sums = [0u64; 64];
         let mut many = [0u64; 4];
-        for (w, c) in self.sum.chunks_exact(4).enumerate() {
-            let x = u64::from(c[0]) | u64::from(c[1]) << 16 | u64::from(c[2]) << 32 | u64::from(c[3]) << 48;
+        let lanes = h0.chunks_exact(4).zip(h1.chunks_exact(4)).zip(h2.chunks_exact(4)).zip(h3.chunks_exact(4));
+        for (w, (sum, (((a, b), c), d))) in sums.iter_mut().zip(lanes).enumerate().take(self.quads) {
+            let x = quad(a) + quad(b) + quad(c) + quad(d);
+            *sum = x;
             let y = x & 0xfffe_fffe_fffe_fffe;
             let high = (((y & 0x7fff_7fff_7fff_7fff) + 0x7fff_7fff_7fff_7fff) | y) & 0x8000_8000_8000_8000;
             let nibble = ((high >> 15).wrapping_mul(1 << 45 | 1 << 30 | 1 << 15 | 1) >> 45) & 0xf;
             many[w >> 4] |= nibble << ((w & 15) * 4);
         }
+        self.hist = [[0; 256]; 4];
         let mut sum = 0.0;
         for (i, &word) in many.iter().enumerate() {
             let mut bits = word;
             while bits != 0 {
                 let p = i * 64 + bits.trailing_zeros() as usize;
                 bits &= bits - 1;
-                sum += nlogn[self.sum[p] as usize];
+                sum += nlogn[(sums[p >> 2] >> ((p & 3) * 16)) as u16 as usize];
             }
         }
         sum
@@ -119,7 +127,7 @@ impl InfoScorer {
             counts: vec![0; n],
             touched: vec![0; n.div_ceil(64)],
             lanes: (t >= LANED_MIN && matrix.n_patterns() <= 256)
-                .then(|| Box::new(Lanes { hist: [[0; 256]; 4], sum: [0; 256] })),
+                .then(|| Box::new(Lanes { hist: [[0; 256]; 4], quads: matrix.n_patterns().div_ceil(4) })),
         }
     }
 
@@ -245,10 +253,10 @@ pub(crate) type FastMap<V> = HashMap<u64, V, BuildHasherDefault<U64Hasher>>;
 /// each with [`wl_core::expected_info`], computing each equivalence group once.
 pub fn score_words(ctx: &Ctx, state: &State, words: &[WordId]) -> Vec<f64> {
     let mut scorer = InfoScorer::new(ctx.matrix, &state.candidates);
-    let eq = Equivalence::new(ctx.list, &state.candidates);
-    if !eq.useful() || words.len() <= state.candidates.len() {
+    let eq = (words.len() > state.candidates.len()).then(|| Equivalence::new(ctx.list, &state.candidates));
+    let Some(eq) = eq.filter(Equivalence::useful) else {
         return words.iter().map(|&w| scorer.score(ctx.matrix, w)).collect();
-    }
+    };
     let mut memo = FastMap::with_capacity_and_hasher(words.len(), Default::default());
     words
         .iter()
@@ -301,6 +309,26 @@ mod tests {
             for g in 0..list.n_guesses() as WordId {
                 let want = expected_info(&m, g, cands, &mut scratch);
                 assert_eq!(s.score(&m, g).to_bits(), want.to_bits(), "{} over {}", list.word(g), cands.len());
+            }
+        }
+    }
+
+    #[test]
+    fn laned_kernel_short_words() {
+        // Every four-letter word over three letters: 81 words, mostly with
+        // repeated letters, so that all 81 patterns occur.
+        let words: Vec<String> =
+            (0..81u32).map(|i| (0..4).map(|k| (b'a' + (i / 3u32.pow(k) % 3) as u8) as char).collect()).collect();
+        let mut sorted = words.clone();
+        sorted.sort();
+        let list = WordList::from_words(Manifest::adhoc("t", 4), &sorted, &sorted).unwrap();
+        let m = PatternMatrix::build(&list);
+        let mut scratch = vec![0u32; m.n_patterns()];
+        for cands in [CandidateSet::full(81), CandidateSet::from_iter(81, (0..81).filter(|a| a % 7 != 3))] {
+            let mut s = InfoScorer::new(&m, &cands);
+            assert!(s.lanes.is_some());
+            for g in 0..81 {
+                assert_eq!(s.score(&m, g).to_bits(), expected_info(&m, g, &cands, &mut scratch).to_bits());
             }
         }
     }

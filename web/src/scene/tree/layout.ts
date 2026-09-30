@@ -626,6 +626,60 @@ function stackRivers(l: LNode): void {
   }
 }
 
+/**
+ * The part of a layout on screen while games are still being revealed (the
+ * growth animation): every node keeps its place, so nothing moves as the
+ * tree grows; only nodes some revealed game reaches are kept (plus those
+ * `keep` names: the trunk, player paths), rivers are as wide as the games
+ * revealed so far, and an ellipsis counts only the streams revealed so far.
+ * Returns new layout nodes; the input layout is not changed.
+ */
+export function revealedLayout(layout: Layout, revealed: (n: TrieNode) => number, keep: (n: TrieNode) => boolean): Layout {
+  const p = layout.params;
+  const nodes: LNode[] = [];
+  const byKey = new Map<string, LNode>();
+  const byTrie = new Map<number, LNode>();
+  const visit = (l: LNode, parent: LNode | null): LNode | null => {
+    let mass = 0;
+    let hidden: TrieNode[] | null = l.hidden;
+    if (l.kind === 'ellipsis') {
+      hidden = [];
+      for (const h of l.hidden ?? []) {
+        const m = revealed(h);
+        if (m > 0) {
+          mass += m;
+          hidden.push(h);
+        }
+      }
+      if (mass <= 0) return null;
+    } else if (l.trie) {
+      mass = revealed(l.trie);
+      if (mass <= 0 && l.kind !== 'root' && !keep(l.trie)) return null;
+    }
+    const c: LNode = {
+      ...l,
+      parent,
+      children: [],
+      mass,
+      riverWidth: riverPx(mass, p.riverScale),
+      hidden,
+      hiddenMass: l.kind === 'ellipsis' ? mass : 0,
+      index: nodes.length,
+    };
+    nodes.push(c);
+    byKey.set(c.key, c);
+    if (c.trie && (c.kind === 'node' || c.kind === 'root')) byTrie.set(c.trie.id, c);
+    for (const k of l.children) {
+      const x = visit(k, c);
+      if (x) c.children.push(x);
+    }
+    stackRivers(c);
+    return c;
+  };
+  const root = visit(layout.root, null)!;
+  return { ...layout, nodes, byKey, byTrie, root };
+}
+
 /** Nodes from the first guess down to `n` (root excluded). */
 export function pathOf(n: TrieNode): TrieNode[] {
   const out: TrieNode[] = [];

@@ -149,3 +149,12 @@ export function approachViewport(v: Viewport, t: Viewport, dtMs: number, tauMs =
   }
   return done;
 }
+
+/**
+ * Scale factor of the Tree ↔ Tree flip at `t` ms into a flip of `dur` ms:
+ * the tree shrinks toward the target strip and grows back (1 outside the flip).
+ */
+export function flipPulse(t: number, dur: number, depth = 0.16): number {
+  if (!(t >= 0) || t >= dur || dur <= 0) return 1;
+  return 1 - depth * Math.sin((Math.PI * t) / dur);
+}

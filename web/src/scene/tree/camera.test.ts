@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { approachViewport, expectedViewport, fitCamera, fitScale, layoutScale, occlusionOf, zoomAt } from './camera';
+import { approachViewport, expectedViewport, fitCamera, fitScale, flipPulse, layoutScale, occlusionOf, zoomAt } from './camera';
 
 describe('tree camera', () => {
   const vp = { left: 0, top: 200, width: 900, height: 600 };
@@ -17,6 +17,14 @@ describe('tree camera', () => {
     const { cam, rest } = zoomAt(c, vp, 0.25, 450, 500, 0.5);
     expect(cam.s).toBe(0.5);
     expect(rest).toBeCloseTo(0.5);
+  });
+
+  it('shrinks and grows back once during a target flip', () => {
+    expect(flipPulse(-1, 600)).toBe(1);
+    expect(flipPulse(0, 600)).toBe(1);
+    expect(flipPulse(300, 600)).toBeCloseTo(0.84);
+    expect(flipPulse(600, 600)).toBe(1);
+    expect(flipPulse(Infinity, 600)).toBe(1);
   });
 
   it('quantises the layout scale in half octaves, never below 1', () => {

@@ -104,7 +104,8 @@
   .zoom button:hover:not(:disabled) {
     background: var(--panel);
   }
-  .zoom button.on {
+  .zoom button.on,
+  .zoom button.on:hover {
     background: var(--fg);
     color: var(--bg);
   }

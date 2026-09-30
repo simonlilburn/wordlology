@@ -85,6 +85,52 @@ export function advanceClock(clock: number, dt: number, total: number, available
   return { clock: lo, stalled: true };
 }
 
+export interface GrowthClock {
+  /** ms of schedule time elapsed. */
+  clock: number;
+  /** Games revealed during the one-at-a-time phase that added nothing new (they take no slot). */
+  skipped: number;
+  /** Waiting for compute. */
+  stalled: boolean;
+}
+
+/**
+ * Advance the growth by dt and reveal the games the schedule wants.
+ * `reveal(first)` reveals the next computed game (first: during the
+ * one-at-a-time phase) and returns how many nodes it put on screen for the
+ * first time, or null when no computed game is waiting. A one-at-a-time slot
+ * is only spent on a game that adds something to the picture: one that
+ * retraces paths already shown (the trunk, at first) is revealed at once and
+ * the schedule moves on. Returns the number of games revealed so far.
+ */
+export function growthStep(
+  st: GrowthClock,
+  dt: number,
+  total: number,
+  count: number,
+  available: number,
+  done: boolean,
+  timing: GrowthTiming,
+  reveal: (first: boolean) => number | null,
+): number {
+  const slots = () => Math.max(1, total - st.skipped);
+  const res = advanceClock(st.clock, dt, slots(), Math.max(0, available - st.skipped), done, timing);
+  st.clock = res.clock;
+  st.stalled = res.stalled;
+  let want = revealCount(st.clock, slots(), timing) + st.skipped;
+  while (count < Math.min(want, total)) {
+    const first = count - st.skipped < timing.firstCount;
+    const fresh = reveal(first);
+    if (fresh === null) break;
+    count++;
+    if (first && fresh === 0 && count < total) {
+      st.skipped++;
+      want = revealCount(st.clock, slots(), timing) + st.skipped;
+    }
+  }
+  return count;
+}
+
 /**
  * Reveal queue: games bucketed by priority (higher first), first in first out
  * within a bucket. Priority is how long the game stays with the trunk: the

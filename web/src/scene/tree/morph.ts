@@ -147,12 +147,18 @@ export class Morph {
       return false;
     }
     const e = easeInOut(t);
+    // Leaving nodes are gone by half-time and new ones fade in after a third,
+    // so the two never overlap at full strength.
+    const out = 1 - easeInOut(Math.min(1, t / 0.5));
+    const inn = easeInOut(Math.max(0, (t - 0.35) / 0.65));
     for (const d of this.nodes.values()) {
       d.x = d.fx + (d.tx - d.fx) * e;
       d.y = d.fy + (d.ty - d.fy) * e;
       d.rw = d.frw + (d.trw - d.frw) * e;
       d.ro = d.fro + (d.tro - d.fro) * e;
-      d.alpha = d.fa + (d.ta - d.fa) * (d.dying ? t : e);
+      if (d.dying) d.alpha = d.fa * out;
+      else if (d.fa === 0) d.alpha = d.ta * inn;
+      else d.alpha = d.fa + (d.ta - d.fa) * e;
     }
     return true;
   }

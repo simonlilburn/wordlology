@@ -21,20 +21,44 @@
     return pathInfo(node, words.guesses, tree.totalMass, app.result.maxGuesses, words.wordLength);
   });
 
-  // Keep the tooltip inside the uncovered viewport.
+  // Keep the tooltip inside the uncovered viewport: below the node if it
+  // fits, else above it, else a compact form (no guess rows) wherever there
+  // is more room.
   const W = 240;
+  const GAP = 8;
+  let height = $state(0);
+  let fullHeight = $state(0);
   const left = $derived(tip ? Math.min(vp.left + vp.width - W / 2 - 8, Math.max(vp.left + W / 2 + 8, tip.x)) : 0);
-  const below = $derived(tip ? tip.y + 8 < vp.top + vp.height - 160 : true);
+  const place = $derived.by(() => {
+    if (!tip) return { top: 0, compact: false };
+    const lo = vp.top + 4;
+    const hi = vp.top + vp.height - 4;
+    const below = hi - (tip.y + GAP);
+    const above = tip.top - GAP - lo;
+    const h = fullHeight || height || 160;
+    if (h <= below) return { top: tip.y + GAP, compact: false };
+    if (h <= above) return { top: tip.top - GAP - h, compact: false };
+    const hc = Math.min(h, height || 110);
+    const top = below >= above ? tip.y + GAP : tip.top - GAP - hc;
+    return { top: Math.max(lo, Math.min(hi - hc, top)), compact: true };
+  });
+  $effect(() => {
+    if (!place.compact && height) fullHeight = height;
+  });
+  $effect(() => {
+    void tip?.node;
+    fullHeight = 0;
+  });
 </script>
 
 {#if tip && (info || tip.kind === 'ellipsis')}
   <div
     class="tip"
     class:pinned={tip.pinned}
-    class:above={!below}
     style:left="{left}px"
-    style:top="{below ? tip.y + 8 : tip.y - 16}px"
+    style:top="{place.top}px"
     style:width="{W}px"
+    bind:offsetHeight={height}
     role={tip.pinned ? 'dialog' : 'tooltip'}
     aria-label="Path"
   >
@@ -45,7 +69,7 @@
       {/if}
       <p class="muted">Tap to show the next {Math.min(12, tip.hidden.count)}.</p>
     {:else if info}
-      <ol class="rows">
+      <ol class="rows" class:compact={place.compact}>
         {#each info.rows as r, i (i)}
           <li aria-label={describeFeedback(r.word, r.pattern)}>
             <span class="word" class:player={r.player}>{r.word}</span>
@@ -89,8 +113,8 @@
     font-size: 0.8rem;
     pointer-events: none;
   }
-  .tip.above {
-    transform: translate(-50%, -100%);
+  .rows.compact {
+    display: none;
   }
   .tip.pinned {
     pointer-events: auto;

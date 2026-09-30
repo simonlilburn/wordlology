@@ -7,9 +7,10 @@ export interface TooltipInfo {
   /** Trie node id of the path's end (for an ellipsis: its parent). */
   node: number;
   kind: 'node' | 'ellipsis' | 'out';
-  /** Anchor in CSS px relative to the canvas. */
+  /** Anchor in CSS px relative to the canvas: below the node's label (`y`) and above it (`top`). */
   x: number;
   y: number;
+  top: number;
   /** Pinned by a tap/click (shows Play); otherwise a hover preview. */
   pinned: boolean;
   /** Ellipsis: hidden paths, their games and filter matches. */
@@ -97,6 +98,7 @@ export function setTooltip(t: TooltipInfo | null): void {
     o.kind === t.kind &&
     Math.abs(o.x - t.x) < 0.5 &&
     Math.abs(o.y - t.y) < 0.5 &&
+    Math.abs(o.top - t.top) < 0.5 &&
     o.pinned === t.pinned &&
     (o.hidden?.count ?? -1) === (t.hidden?.count ?? -1) &&
     (o.hidden?.matches ?? -1) === (t.hidden?.matches ?? -1)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fixtureTree, SOLVED } from './fixtures';
-import { bandY, extendHeaviest, layoutTree, pathOf, riverPx, visibleCount, waterFill, type LayoutParams, type LNode } from './layout';
+import { bandY, extendHeaviest, layoutTree, pathOf, revealedLayout, riverPx, visibleCount, waterFill, type LayoutParams, type LNode } from './layout';
 
 const params = (over: Partial<LayoutParams> = {}): LayoutParams => ({
   maxGuesses: 6,
@@ -386,6 +386,52 @@ describe('layoutTree fits the width', () => {
     const L = layoutTree({ root: t.root, params: params({ width: 1000, totalGames: 200 }), trunk: pathOf(t.find([1, 2])!) });
     // 4 of 200 games: the tree is narrow, not stretched over the whole width.
     expect(L.maxX - L.minX).toBeLessThan(300);
+  });
+});
+
+describe('revealedLayout', () => {
+  it('keeps every place and shows only what the revealed games reach', () => {
+    const t = fixtureTree();
+    t.add([1, 2, 3], { solved: true, times: 20 });
+    t.add([1, 4], { solved: true, times: 10 });
+    for (let g = 0; g < 30; g++) t.add([1, 100 + g], { solved: true, times: 1 });
+    const trunk = pathOf(t.find([1, 2, 3])!);
+    const full = layoutTree({ root: t.root, params: params({ totalGames: t.root.mass, width: 600 }), trunk });
+    // Revealed so far: 3 games down the trunk, 1 through [1, 4] and 2 hidden in the ellipsis.
+    const shown = new Map<number, number>([
+      [t.root.id, 6],
+      [t.find([1])!.id, 6],
+      [t.find([1, 2])!.id, 3],
+      [t.find([1, 2, 3])!.id, 3],
+      [t.find([1, 4])!.id, 1],
+      [t.find([1, 128])!.id, 1],
+      [t.find([1, 129])!.id, 1],
+    ]);
+    const keep = new Set(trunk.map((n) => n.id));
+    const part = revealedLayout(full, (n) => shown.get(n.id) ?? 0, (n) => keep.has(n.id));
+    for (const l of part.nodes) expect(l.x).toBe(full.byKey.get(l.key)!.x);
+    expect(part.byTrie.has(t.find([1, 4])!.id)).toBe(true);
+    const opener = part.byTrie.get(t.find([1])!.id)!;
+    const ell = opener.children.find((c) => c.kind === 'ellipsis')!;
+    expect(ell.hidden!.length).toBe(2);
+    expect(ell.hiddenMass).toBe(2);
+    expect(ell.riverWidth).toBeCloseTo(riverPx(2, 0.2));
+    // Children that no revealed game reaches are not on screen yet.
+    const unrevealed = full.byTrie.get(t.find([1])!.id)!.children.filter((c) => c.kind === 'node' && !shown.has(c.trie!.id));
+    for (const c of unrevealed) expect(part.byKey.has(c.key)).toBe(false);
+    // Rivers leaving a node still stack side by side around the trunk river.
+    const tc = opener.children.find((c) => c.trunk)!;
+    expect(tc.riverOffset).toBe(0);
+  });
+
+  it('keeps the trunk before any of its games is revealed', () => {
+    const t = fixtureTree();
+    t.add([1, 2], { solved: true, times: 5 });
+    const trunk = pathOf(t.find([1, 2])!);
+    const full = layoutTree({ root: t.root, params: params(), trunk });
+    const part = revealedLayout(full, () => 0, (n) => trunk.includes(n));
+    expect(part.byTrie.has(t.find([1, 2])!.id)).toBe(true);
+    expect(part.byTrie.get(t.find([1, 2])!.id)!.riverWidth).toBe(0);
   });
 });
 
