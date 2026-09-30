@@ -155,8 +155,7 @@ impl DistCache {
         let dist = Arc::new(compute());
         let cost = ((self.clock)() - t0).max(MIN_COST_MS);
         let weight = dist.entries.len().max(1);
-        while !self.map.is_empty()
-            && (self.map.len() + 1 > self.max_entries || self.weight + weight > self.max_weight)
+        while !self.map.is_empty() && (self.map.len() + 1 > self.max_entries || self.weight + weight > self.max_weight)
         {
             self.evict();
         }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { binDiffs, largestDiffs, niceStep, winTieLoss } from './histogram';
 import { dropIndex, meanOf, moveItem, sortByMean } from './order';
-import { fmtMetric, rankingCsv, ReorderThrottle, tieBrackets } from './ranking';
+import { fmtEntryValue, fmtMetric, isScreenedOut, rankingCsv, ReorderThrottle, roundProgress, tieBrackets } from './ranking';
 
 describe('difference histogram', () => {
   it('bins integer differences one per integer, centred on 0', () => {
@@ -141,5 +141,31 @@ describe('compare fallback', () => {
     expect(c.meanDiffSe).toBeCloseTo(sd / Math.sqrt(3), 9);
     expect(pairedCount(c.diffs)).toBe(3);
     expect(c.distA).toEqual([0.5, 0.5]);
+  });
+});
+
+describe('ranking progress', () => {
+  const e = (stage: 'full' | 'screened', round: number, provisional: boolean, scoreKind: 'mean' | 'info' = 'mean') => ({ stage, round, provisional, scoreKind });
+
+  it('tells screened-out entries from those still in the running', () => {
+    // Round 3 is running: candidates evaluated in round 2 are still in; round 1 was screened out.
+    expect(isScreenedOut(e('screened', 2, true), 3, 'running')).toBe(false);
+    expect(isScreenedOut(e('screened', 1, false), 3, 'running')).toBe(true);
+    expect(isScreenedOut(e('full', 2, true), 3, 'running')).toBe(false);
+    // Once done (or cancelled), every entry without a full card was screened.
+    expect(isScreenedOut(e('screened', 2, false), 3, 'done')).toBe(true);
+    expect(isScreenedOut(e('screened', 2, false), 3, 'cancelled')).toBe(true);
+  });
+
+  it('counts the candidates that finished the current round', () => {
+    const entries = [e('screened', 1, false), e('screened', 1, true), e('screened', 1, true), e('screened', 0, false)];
+    expect(roundProgress(entries, 2, 'running')).toEqual({ active: 3, done: 1 });
+    expect(roundProgress(entries, 2, 'done')).toEqual({ active: 0, done: 0 });
+  });
+
+  it('formats one-step information in bits', () => {
+    expect(fmtEntryValue('mean', { scoreKind: 'info', value: 5.8912 }, true)).toBe('5.89 bits');
+    expect(fmtEntryValue('mean', { scoreKind: 'mean', value: 3.456 }, true)).toBe('~3.5');
+    expect(fmtEntryValue('fail_rate', { scoreKind: 'fail_rate', value: 0.0123 }, false)).toBe('1.2%');
   });
 });

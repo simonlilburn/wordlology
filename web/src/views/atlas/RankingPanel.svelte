@@ -14,7 +14,7 @@
   import { sceneView } from '../../scene/atlas/view.svelte';
   import { gridAxes } from '../../scene/atlas/cells';
   import { cardTheme, prefersDark, rampPositions, rgbCss, rowFill } from '../../scene/card/ramp';
-  import { fmtMetric, METRIC_LABELS, rankingCsv, ReorderThrottle, tieBrackets } from './ranking';
+  import { fmtEntryValue, fmtMetric, isScreenedOut, METRIC_LABELS, rankingCsv, ReorderThrottle, roundProgress, tieBrackets } from './ranking';
 
   type Request = { kind: 'row'; opener: string | null } | { kind: 'column'; strategy: string };
   let { request, onclose }: { request: Request; onclose: () => void } = $props();
@@ -111,16 +111,23 @@
     const r = ranking;
     if (!r) return null;
     const byKey = new Map(r.entries.map((e) => [e.key, e] as const));
-    const list = order.map((k) => byKey.get(k)).filter((e): e is RankingEntry => !!e);
+    const all = order.map((k) => byKey.get(k)).filter((e): e is RankingEntry => !!e);
+    const list = all.slice(0, limit);
     return {
       status: r.status,
       round: r.round,
       rounds: r.rounds,
       metric: r.metric,
       list,
+      total: all.length,
+      progress: roundProgress(r.entries, r.round, r.status),
       brackets: tieBrackets(list.map((e) => e.tieGroup)),
     };
   });
+
+  /** Entries shown (a column ranking can hold thousands of openers). */
+  const PAGE = 40;
+  let limit = $state(PAGE);
 
   const theme = cardTheme(prefersDark());
 
@@ -131,8 +138,30 @@
     return dist.map((v, i) => ({ fill: rgbCss(rowFill(theme, ramp[i])), w: max > 0 ? v / max : 0 }));
   }
 
+  /** Estimates carry "~": every value that is not a finished full card. */
   function provisional(e: RankingEntry): boolean {
-    return e.stage === 'screened' || (view?.status === 'running' && e.stage !== 'full');
+    return e.stage !== 'full' || !!e.provisional;
+  }
+
+  function screenedOut(e: RankingEntry): boolean {
+    return !!view && isScreenedOut(e, view.round, view.status);
+  }
+
+  function hasInterval(e: RankingEntry): boolean {
+    return e.scoreKind !== 'info' && Number.isFinite(e.ciLow) && Number.isFinite(e.ciHigh) && e.ciHigh > e.ciLow;
+  }
+
+  function entryLabel(e: RankingEntry, i: number): string {
+    const v = view;
+    if (!v) return e.label;
+    const name = request.kind === 'row' ? e.label : e.label.toUpperCase();
+    const parts = [`${e.rank}. ${name}`, fmtEntryValue(v.metric, e, provisional(e))];
+    if (hasInterval(e)) parts.push(`95% interval ${fmtMetric(v.metric, e.ciLow, provisional(e))} to ${fmtMetric(v.metric, e.ciHigh, provisional(e)).replace('~', '')}`);
+    if (Number.isFinite(e.failRate)) parts.push(`${fmtMetric('fail_rate', e.failRate, provisional(e))} fail`);
+    if (screenedOut(e)) parts.push('screened');
+    if (v.brackets[i]) parts.push('tied within noise');
+    parts.push(request.kind === 'row' ? 'add as a strategy column' : 'add as an opener row');
+    return parts.join(', ');
   }
 
   function add(e: RankingEntry): void {
@@ -223,7 +252,9 @@
       <p class="sub">
         {#if view}
           by {METRIC_LABELS[view.metric]} ·
-          {#if view.status === 'running'}round {view.round} of {view.rounds}{:else if view.status === 'done'}done{:else}{view.status}{/if}
+          {#if view.status === 'running'}
+            round {view.round} of {view.rounds}{#if view.progress.active} · {view.progress.done.toLocaleString('en-US')} / {view.progress.active.toLocaleString('en-US')} evaluated{/if}
+          {:else if view.status === 'done'}done{:else}{view.status}{/if}
         {:else}
           by {METRIC_LABELS[app.result.rankMetric]}
         {/if}
@@ -241,7 +272,8 @@
       <button onclick={exportCsv} disabled={!view.list.length}>ranking.csv</button>
     </div>
     {#if view.status === 'running'}
-      <div class="progress" aria-hidden="true"><span style="width:{(100 * Math.max(0, view.round - 1)) / Math.max(1, view.rounds)}%"></span></div>
+      {@const within = view.progress.active ? view.progress.done / view.progress.active : 0}
+      <div class="progress" aria-hidden="true"><span style="width:{(100 * (Math.max(0, view.round - 1) + within)) / Math.max(1, view.rounds)}%"></span></div>
     {/if}
     <ol class="entries" aria-live="polite" aria-busy={view.status === 'running'}>
       {#each view.list as e, i (e.key)}
@@ -249,17 +281,24 @@
           <button
             class="entry"
             onclick={() => add(e)}
+            aria-label={entryLabel(e, i)}
             title={request.kind === 'row' ? 'Add as a strategy column' : 'Add as an opener row'}
           >
             <span class="rank">{e.rank}</span>
             <span class="name">
-              {#if request.kind === 'row'}
-                <span class="swatch" style="background:{e.colour ?? '#888'}" aria-hidden="true"></span>{e.label}
-              {:else}
-                <span class="word">{e.label.toUpperCase()}</span>
+              <span class="label">
+                {#if request.kind === 'row'}
+                  <span class="swatch" style="background:{e.colour ?? '#888'}" aria-hidden="true"></span>{e.label}
+                {:else}
+                  <span class="word">{e.label.toUpperCase()}</span>
+                {/if}
+              </span>
+              {#if screenedOut(e) || view.brackets[i] === 'start'}
+                <span class="badges">
+                  {#if screenedOut(e)}<span class="badge">screened</span>{/if}
+                  {#if view.brackets[i] === 'start'}<span class="tie">tied within noise</span>{/if}
+                </span>
               {/if}
-              {#if e.stage === 'screened'}<span class="badge">screened</span>{/if}
-              {#if view.brackets[i] === 'start'}<span class="tie">tied within noise</span>{/if}
             </span>
             <span class="mini" aria-hidden="true">
               {#each miniRows(e.distribution) as r, k (k)}
@@ -267,17 +306,22 @@
               {/each}
             </span>
             <span class="stats">
-              <span class="value">{fmtMetric(view.metric, e.value, provisional(e))}</span>
-              {#if Number.isFinite(e.ciLow) && Number.isFinite(e.ciHigh)}
+              <span class="value">{fmtEntryValue(view.metric, e, provisional(e))}</span>
+              {#if hasInterval(e)}
                 <span class="ci">{fmtMetric(view.metric, e.ciLow, provisional(e))}–{fmtMetric(view.metric, e.ciHigh, provisional(e)).replace('~', '')}</span>
               {/if}
-              <span class="fail">{fmtMetric('fail_rate', e.failRate, provisional(e))} fail</span>
+              {#if Number.isFinite(e.failRate)}<span class="fail">{fmtMetric('fail_rate', e.failRate, provisional(e))} fail</span>{/if}
             </span>
           </button>
         </li>
       {:else}
         <li class="note">Screening candidates…</li>
       {/each}
+      {#if view.total > view.list.length}
+        <li class="more">
+          <button onclick={() => (limit += 100)}>Show {Math.min(100, view.total - view.list.length)} more of {(view.total - view.list.length).toLocaleString('en-US')}</button>
+        </li>
+      {/if}
     </ol>
   {/if}
 </div>
@@ -390,7 +434,7 @@
   .entry {
     width: 100%;
     display: grid;
-    grid-template-columns: 26px minmax(0, 1fr) 46px auto;
+    grid-template-columns: 34px minmax(0, 1fr) 46px auto;
     align-items: center;
     gap: 8px;
     min-height: 44px;
@@ -413,9 +457,32 @@
     text-align: right;
   }
   .name {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .label {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .more {
+    padding: 8px 0 0;
+  }
+  .more button {
+    width: 100%;
+    min-height: 40px;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
   }
   .word {
     font-family: var(--font-mono);
@@ -432,7 +499,6 @@
   .badge,
   .tie {
     display: inline-block;
-    margin-left: 6px;
     padding: 0 5px;
     border-radius: 6px;
     font-size: 10.5px;

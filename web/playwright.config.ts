@@ -24,7 +24,7 @@ export default defineConfig({
     timeout: 15_000,
     toHaveScreenshot: {
       // SwiftShader WebGL and font hinting differ slightly between machines.
-      maxDiffPixelRatio: 0.03,
+      maxDiffPixelRatio: 0.01,
       threshold: 0.3,
       animations: 'disabled',
       caret: 'hide',

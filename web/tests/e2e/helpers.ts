@@ -79,6 +79,7 @@ export interface OpenOptions {
  * (`#t=<encoded answer index>`, applied by the app's hashchange handler).
  */
 export async function openGameAgainst(page: Page, word = TARGET, opts: OpenOptions = {}): Promise<number> {
+  await installDrawCounter(page);
   await page.goto('/');
   await waitForApp(page);
   const idx = await answerIndex(page, word);
@@ -295,4 +296,43 @@ export async function topDialog(page: Page, name: string): Promise<Locator> {
     if (onTop) return d;
   }
   return dialogs.first();
+}
+
+/**
+ * Count WebGL draw calls (in every context) so tests can wait for the
+ * render-on-demand scene to go idle. Call before the page loads.
+ */
+export async function installDrawCounter(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __e2eDraws: number; __e2eLastDraw: number };
+    if (typeof w.__e2eDraws === 'number') return;
+    w.__e2eDraws = 0;
+    w.__e2eLastDraw = 0;
+    const names = ['drawArrays', 'drawElements', 'drawArraysInstanced', 'drawElementsInstanced', 'drawRangeElements', 'clear'];
+    for (const ctor of [globalThis.WebGLRenderingContext, globalThis.WebGL2RenderingContext]) {
+      if (!ctor) continue;
+      const proto = ctor.prototype as unknown as Record<string, (...args: unknown[]) => unknown>;
+      for (const name of names) {
+        const orig = proto[name];
+        if (typeof orig !== 'function') continue;
+        proto[name] = function (this: unknown, ...args: unknown[]) {
+          w.__e2eDraws++;
+          w.__e2eLastDraw = performance.now();
+          return orig.apply(this, args);
+        };
+      }
+    }
+  });
+}
+
+/** Wait until no WebGL frame has been drawn for `quietMs` (the scene renders on demand, so idle means settled). */
+export async function waitForSceneIdle(page: Page, quietMs = 1000, timeout = 30_000): Promise<void> {
+  await page.waitForFunction(
+    (q) => {
+      const w = window as unknown as { __e2eDraws?: number; __e2eLastDraw?: number };
+      return typeof w.__e2eLastDraw === 'number' && performance.now() - w.__e2eLastDraw >= q;
+    },
+    quietMs,
+    { timeout, polling: 100 },
+  );
 }
