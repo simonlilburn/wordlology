@@ -314,6 +314,7 @@ impl PatternMatrix {
     pub fn partition_counts(&self, guess: WordId, cands: &CandidateSet, counts: &mut [u32]) {
         counts.iter_mut().for_each(|c| *c = 0);
         match self.row(guess) {
+            Row::U8(r) if cands.len() >= LANED_COUNT && counts.len() <= 256 => count_row_laned(r, cands, counts),
             Row::U8(r) => count_row(r, cands, counts),
             Row::U16(r) => count_row(r, cands, counts),
         }
@@ -365,18 +366,86 @@ fn count_row<T: Copy + Into<usize>>(row: &[T], cands: &CandidateSet, counts: &mu
     }
 }
 
+/// Candidate sets at least this large are counted in two interleaved
+/// histograms (so runs of one pattern do not wait on each other's increments).
+const LANED_COUNT: usize = 256;
+
+/// [`count_row`] for u8 rows and large candidate sets; `counts` has at most 256 entries.
+#[inline]
+fn count_row_laned(row: &[u8], cands: &CandidateSet, counts: &mut [u32]) {
+    let [mut h0, mut h1] = [[0u32; 256]; 2];
+    for (w, &bits) in cands.words().iter().enumerate() {
+        if bits == u64::MAX {
+            for pair in row[w * 64..w * 64 + 64].chunks_exact(2) {
+                h0[pair[0] as usize] += 1;
+                h1[pair[1] as usize] += 1;
+            }
+        } else {
+            let mut b = bits;
+            while b != 0 {
+                h0[row[w * 64 + b.trailing_zeros() as usize] as usize] += 1;
+                b &= b - 1;
+            }
+        }
+    }
+    for (c, (a, b)) in counts.iter_mut().zip(h0.iter().zip(&h1)) {
+        *c = a + b;
+    }
+}
+
+/// Bit i set where byte i of `cells` (at most 64) equals `pattern`: eight
+/// bytes at a time, each byte of the XOR tested for zero exactly (no borrow
+/// between bytes) and the eight flags gathered with one multiplication.
+#[inline]
+fn match_mask_u8(cells: &[u8], pattern: u8) -> u64 {
+    let spread = u64::from(pattern) * 0x0101_0101_0101_0101;
+    let mut chunks = cells.chunks_exact(8);
+    let mut m = 0u64;
+    for (k, c) in (&mut chunks).enumerate() {
+        let x = u64::from_le_bytes(c.try_into().expect("eight bytes")) ^ spread;
+        let low7 = (x & 0x7f7f_7f7f_7f7f_7f7f) + 0x7f7f_7f7f_7f7f_7f7f;
+        let zero = !(low7 | x) & 0x8080_8080_8080_8080;
+        m |= ((zero >> 7).wrapping_mul(0x0102_0408_1020_4080) >> 56) << (8 * k);
+    }
+    let done = cells.len() - chunks.remainder().len();
+    for (i, &c) in chunks.remainder().iter().enumerate() {
+        m |= ((c == pattern) as u64) << (done + i);
+    }
+    m
+}
+
+/// A u8 or u16 cell, compared many at a time.
+trait MatchMask: Copy + PartialEq {
+    /// Bit i set where `cells[i]` (at most 64 cells) equals `pattern`.
+    fn match_mask(cells: &[Self], pattern: Self) -> u64;
+}
+
+impl MatchMask for u8 {
+    #[inline]
+    fn match_mask(cells: &[u8], pattern: u8) -> u64 {
+        match_mask_u8(cells, pattern)
+    }
+}
+
+impl MatchMask for u16 {
+    #[inline]
+    fn match_mask(cells: &[u16], pattern: u16) -> u64 {
+        let mut m = 0u64;
+        for (i, &c) in cells.iter().enumerate() {
+            m |= ((c == pattern) as u64) << i;
+        }
+        m
+    }
+}
+
 /// The words of the candidates whose cell in `row` is `pattern`.
 #[inline]
-fn refine_row<T: Copy + PartialEq>(row: &[T], cands: &CandidateSet, pattern: T) -> Vec<u64> {
+fn refine_row<T: MatchMask>(row: &[T], cands: &CandidateSet, pattern: T) -> Vec<u64> {
     let cands = cands.words();
     let mut out = vec![0u64; cands.len()];
     for ((o, &bits), cells) in out.iter_mut().zip(cands).zip(row.chunks(64)) {
         if bits.count_ones() >= DENSE_WORD {
-            let mut m = 0u64;
-            for (i, &c) in cells.iter().enumerate() {
-                m |= ((c == pattern) as u64) << i;
-            }
-            *o = m & bits;
+            *o = T::match_mask(cells, pattern) & bits;
         } else {
             let mut b = bits;
             while b != 0 {
