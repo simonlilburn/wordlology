@@ -7,7 +7,7 @@
 //!
 //! - collects the candidates' answer indices once instead of walking the
 //!   bitset for every guess,
-//! - looks `c · log2 c` up in a table built once per state,
+//! - looks `c · log2 c` up in a table (built once with the matrix),
 //! - counts in `u16`, and
 //! - marks touched patterns in a bitmap and visits only those, in increasing
 //!   pattern order (so the summation order is unchanged), resetting only
@@ -41,7 +41,8 @@ pub struct InfoScorer {
     cands: Vec<AnswerIdx>,
     total: f64,
     log2_total: f64,
-    /// `nlogn[c] = c · log2 c`, as `wl_core::entropy_from_counts` computes it.
+    /// `nlogn[c] = c · log2 c` for `c > 1`, as `wl_core::entropy_from_counts`
+    /// computes it (from [`PatternMatrix::nlogn`]).
     nlogn: Vec<f64>,
     counts: Vec<u16>,
     /// Bit p is set when pattern p has a non-zero count.
@@ -107,12 +108,7 @@ impl InfoScorer {
     pub fn new(matrix: &PatternMatrix, cands: &CandidateSet) -> InfoScorer {
         let t = cands.len();
         assert!(t <= u16::MAX as usize, "too many candidates for u16 counts");
-        let nlogn = (0..=t)
-            .map(|c| {
-                let c = c as f64;
-                c * math::log2(c)
-            })
-            .collect();
+        let nlogn = matrix.nlogn()[..=t].to_vec();
         // At least 256 buckets so a u8 pattern can index without a bounds check.
         let n = matrix.n_patterns().max(256);
         InfoScorer {

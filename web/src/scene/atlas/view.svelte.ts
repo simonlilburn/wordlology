@@ -42,6 +42,8 @@ export const cardUi = $state({
   margins: false,
   /** Show the text-alternative table (card distribution / atlas means) visibly. */
   table: false,
+  /** Screen px a side panel (compare) covers at the left of the scene viewport; the grid refits beside it. */
+  insetLeft: 0,
 });
 
 const seenVersions = new WeakMap<object, number>();

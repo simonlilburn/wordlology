@@ -7,7 +7,7 @@
   import { compareRuns, type Comparison } from '../../model/compare';
   import { cells, gridAxes, type Cell } from '../../scene/atlas/cells';
   import { openTree } from '../../scene/atlas/interact';
-  import { sceneView } from '../../scene/atlas/view.svelte';
+  import { cardUi, sceneView } from '../../scene/atlas/view.svelte';
   import { fmtMean, fmtPercent, rowName } from '../../scene/card/format';
   import { pairCards, pairedCount } from './compare';
   import { binDiffs } from './histogram';
@@ -161,10 +161,26 @@
   });
   const zeroX = $derived(hist && hist.counts.length ? ((hist.zeroBin + 0.5) * HW) / hist.counts.length : HW / 2);
 
+  // On wide screens the panel sits at the left and the grid slides over beside it.
+  let winW = $state(typeof window !== 'undefined' ? window.innerWidth : 1280);
+  const panelW = $derived(Math.min(400, Math.max(260, winW - 24)));
+  $effect(() => {
+    cardUi.insetLeft = winW >= 900 ? panelW + 24 : 0;
+    return () => {
+      cardUi.insetLeft = 0;
+    };
+  });
+
   const panelStyle = $derived.by(() => {
     const vp = sceneView.vp;
-    const W = Math.min(400, Math.max(280, vp.width - 24));
-    return `left:${vp.left + 12}px;top:${vp.top + 12}px;width:${W}px;max-height:${Math.max(240, vp.height - 24)}px`;
+    return `left:12px;top:${vp.top + 12}px;width:${panelW}px;max-height:${Math.max(240, vp.height - 24)}px`;
+  });
+
+  // Histogram bars in each side's strategy colour (distinct defaults when the two match).
+  const sideColours = $derived.by((): [string, string] => {
+    const s = sides;
+    if (!s || s[0].colour.toLowerCase() === s[1].colour.toLowerCase()) return ['var(--correct)', 'var(--accent)'];
+    return [s[0].colour, s[1].colour];
   });
 
   function opener(o: string | null): string {
@@ -178,6 +194,8 @@
     }
   }
 </script>
+
+<svelte:window bind:innerWidth={winW} />
 
 <div class="panel" role="dialog" tabindex="-1" aria-label="Compare two cards" style={panelStyle} onkeydown={keydown}>
   <header>
@@ -226,7 +244,14 @@
       {#if hist && hist.n > 0}
         <svg viewBox="0 0 {HW} {HH}" class="hist" role="img" aria-label="Histogram of per-target differences A minus B over {paired} targets; left of zero A needs fewer guesses.">
           {#each bars as b, i (i)}
-            <rect x={b.x} y={b.y} width={b.w} height={b.h} class="hb {b.side}"><title>{signed(b.mid)}: {b.c} targets</title></rect>
+            <rect
+              x={b.x}
+              y={b.y}
+              width={b.w}
+              height={b.h}
+              class="hb {b.side}"
+              style={b.side === 'a' ? `fill:${sideColours[0]}` : b.side === 'b' ? `fill:${sideColours[1]}` : ''}
+            ><title>{signed(b.mid)}: {b.c} targets</title></rect>
           {/each}
           <line x1={zeroX} x2={zeroX} y1={PAD_T - 4} y2={HH - PAD_B + 3} class="zero" />
           <text x={zeroX} y={HH - 6} text-anchor="middle" class="axis">0</text>
@@ -238,13 +263,13 @@
         <p class="note">Waiting for targets both cards have played…</p>
       {/if}
 
-      <ul class="counts">
-        <li><strong>{cmp.wins}</strong> targets where A wins</li>
-        <li><strong>{cmp.ties}</strong> ties</li>
-        <li><strong>{cmp.losses}</strong> where B wins</li>
-      </ul>
+      <dl class="counts">
+        <div><dt>A wins</dt><dd>{cmp.wins.toLocaleString('en-US')}</dd></div>
+        <div><dt>Ties</dt><dd>{cmp.ties.toLocaleString('en-US')}</dd></div>
+        <div><dt>B wins</dt><dd>{cmp.losses.toLocaleString('en-US')}</dd></div>
+      </dl>
       <p class="meandiff">
-        Mean difference {signed(cmp.meanDiff, 3)}{#if Number.isFinite(cmp.meanDiffSe)} ± {cmp.meanDiffSe.toFixed(3)} (SE){/if}
+        {`Mean difference ${signed(cmp.meanDiff, 3)}${Number.isFinite(cmp.meanDiffSe) ? ` ± ${cmp.meanDiffSe.toFixed(3)} (SE)` : ''}`}
         · paired on {paired.toLocaleString('en-US')} / {nTargets.toLocaleString('en-US')} targets
       </p>
 
@@ -416,12 +441,25 @@
     margin: 2px 0 0;
   }
   .counts {
-    list-style: none;
-    padding: 0;
-    margin: 10px 0 4px;
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
+    margin: 10px 0 6px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .counts div {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 4px 8px;
+  }
+  .counts dt {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .counts dd {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
   }
   .meandiff {
     margin: 0;

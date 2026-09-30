@@ -24,7 +24,7 @@ import {
   type View,
   type Viewport,
 } from '../atlas/layout';
-import { publish, sceneView } from '../atlas/view.svelte';
+import { cardUi, publish, sceneView } from '../atlas/view.svelte';
 import { atlasFrame, dipLevel, dipStep, STACK_PLANES, stackFrame, type AtlasFrame, type DipState, type StackFrame } from './choreo';
 import { FACE } from './draw';
 import { springStep } from './spring';
@@ -81,6 +81,7 @@ class Director {
   private offsetInit = false;
   private treeCam: TreeCam | null = null;
   private glide = { x: 0, y: 0, vx: 0, vy: 0, init: false };
+  private inset = { x: 0, v: 0 };
   private above1 = false;
   ctx: SceneContext | null = null;
 
@@ -98,6 +99,23 @@ class Director {
     this.dpr = f.dpr || 1;
     const vp = ctx.viewport;
     this.vp = vp && vp.width > 10 && vp.height > 10 ? { ...vp } : { left: 0, top: 0, width: this.width, height: this.height };
+    // A side panel (compare) at the left: the view slides over to stay beside it.
+    const wantInset = f.z > 1 && this.vp.width - cardUi.insetLeft >= 360 ? Math.max(0, cardUi.insetLeft) : 0;
+    const I = this.inset;
+    if (this.reduced) {
+      I.x = wantInset;
+      I.v = 0;
+    } else {
+      [I.x, I.v] = springStep(I.x, I.v, wantInset, f.dt / 1000, 14);
+      if (Math.abs(I.x - wantInset) < 0.5) {
+        I.x = wantInset;
+        I.v = 0;
+      } else this.animating = true;
+    }
+    if (I.x > 0) {
+      this.vp.left += I.x;
+      this.vp.width -= I.x;
+    }
     this.yUp = ctx.ortho.top >= ctx.ortho.bottom ? 1 : -1;
     const z = this.z;
 
@@ -261,13 +279,19 @@ class Director {
     return { x: 0, top: 0, cy: 0 };
   }
 
-  /** Place the grid so the focused cell sits on the focused tree (only while the neighbours are hidden). */
+  /**
+   * Place the grid so the focused cell sits on the focused tree. The camera
+   * follows layout coordinates, so moving the grid in world space changes
+   * nothing on screen while the tree is invisible (z ≥ 1.8): the offset then
+   * tracks the focus (a cell focused in the atlas zooms back into its tree).
+   * While the tree shows (1.02 < z < 1.8) it stays put, so nothing jumps.
+   */
   private updateOffset(z: number): void {
     const fr = this.focusRect;
     if (!fr) return;
     const key = `${this.focusIdx?.join(',')}|${this.layout.cols}x${this.layout.rows}|${this.k}`;
-    const neighboursHidden = z < 1.95 || (this.reduced && this.rmCard === 0);
-    if (!this.offsetInit || z <= 1.02 || (key !== this.offsetKey && neighboursHidden)) {
+    const treeHidden = z >= 1.8 || (this.reduced && this.dip.level >= 2);
+    if (!this.offsetInit || z <= 1.02 || treeHidden) {
       const T = this.treeAnchor();
       const k = this.k;
       const x = T.x - (fr.x + fr.w / 2) * k;

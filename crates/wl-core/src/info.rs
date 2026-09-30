@@ -29,7 +29,21 @@ pub fn entropy_from_counts(counts: &[u32], total: u32) -> f64 {
 #[inline]
 pub fn expected_info(matrix: &PatternMatrix, guess: WordId, cands: &CandidateSet, scratch: &mut [u32]) -> f64 {
     matrix.partition_counts(guess, cands, scratch);
-    entropy_from_counts(scratch, cands.len() as u32)
+    let total = cands.len();
+    if total == 0 {
+        return 0.0;
+    }
+    // `entropy_from_counts`, with its `c · log2 c` terms looked up (the same
+    // values, added in the same order).
+    let nlogn = matrix.nlogn();
+    let mut sum_nlogn = 0.0;
+    for &c in scratch.iter() {
+        if c > 1 {
+            sum_nlogn += nlogn[c as usize];
+        }
+    }
+    let t = total as f64;
+    (math::log2(t) - sum_nlogn / t).max(0.0)
 }
 
 /// Observed information (bits) from narrowing `before` candidates to `after`.

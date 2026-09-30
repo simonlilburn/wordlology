@@ -41,6 +41,15 @@ impl CandidateSet {
         s
     }
 
+    /// A set from its bit words (bit `i` of word `w` is answer `64 w + i`),
+    /// which must have no bits at or above `universe`.
+    pub fn from_words(universe: usize, bits: Vec<u64>) -> CandidateSet {
+        assert_eq!(bits.len(), universe.div_ceil(64), "wrong number of words for the universe");
+        debug_assert!(universe % 64 == 0 || bits.last().is_none_or(|&w| w >> (universe % 64) == 0));
+        let len = bits.iter().map(|w| w.count_ones() as usize).sum();
+        CandidateSet { bits, universe, len }
+    }
+
     pub fn from_iter<I: IntoIterator<Item = AnswerIdx>>(universe: usize, items: I) -> CandidateSet {
         let mut s = CandidateSet::empty(universe);
         for a in items {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { binDiffs, largestDiffs, niceStep, winTieLoss } from './histogram';
 import { dropIndex, meanOf, moveItem, sortByMean } from './order';
-import { fmtEntryValue, fmtMetric, isScreenedOut, rankingCsv, ReorderThrottle, roundProgress, tieBrackets } from './ranking';
+import { fmtEntryValue, fmtMetric, isScreenedOut, rankingCsv, ReorderThrottle, roundProgress, roundStart, tieBrackets } from './ranking';
 
 describe('difference histogram', () => {
   it('bins integer differences one per integer, centred on 0', () => {
@@ -145,22 +145,38 @@ describe('compare fallback', () => {
 });
 
 describe('ranking progress', () => {
-  const e = (stage: 'full' | 'screened', round: number, provisional: boolean, scoreKind: 'mean' | 'info' = 'mean') => ({ stage, round, provisional, scoreKind });
+  const e = (key: string, stage: 'full' | 'screened', round: number, provisional: boolean, targets = 200, scoreKind: 'mean' | 'info' = 'mean') => ({
+    key,
+    stage,
+    round,
+    provisional,
+    scoreKind,
+    targets,
+    replicates: 1,
+  });
 
   it('tells screened-out entries from those still in the running', () => {
     // Round 3 is running: candidates evaluated in round 2 are still in; round 1 was screened out.
-    expect(isScreenedOut(e('screened', 2, true), 3, 'running')).toBe(false);
-    expect(isScreenedOut(e('screened', 1, false), 3, 'running')).toBe(true);
-    expect(isScreenedOut(e('full', 2, true), 3, 'running')).toBe(false);
-    // Once done (or cancelled), every entry without a full card was screened.
-    expect(isScreenedOut(e('screened', 2, false), 3, 'done')).toBe(true);
-    expect(isScreenedOut(e('screened', 2, false), 3, 'cancelled')).toBe(true);
+    expect(isScreenedOut(e('a', 'screened', 2, true), 3, 'running')).toBe(false);
+    expect(isScreenedOut(e('a', 'screened', 1, false), 3, 'running')).toBe(true);
+    expect(isScreenedOut(e('a', 'full', 2, true), 3, 'running')).toBe(false);
+    // Once done, every entry without a full card was screened; a cancelled round's candidates were not.
+    expect(isScreenedOut(e('a', 'screened', 2, false), 3, 'done')).toBe(true);
+    expect(isScreenedOut(e('a', 'screened', 2, false), 3, 'cancelled')).toBe(false);
+    expect(isScreenedOut(e('a', 'screened', 1, false), 3, 'cancelled')).toBe(true);
   });
 
   it('counts the candidates that finished the current round', () => {
-    const entries = [e('screened', 1, false), e('screened', 1, true), e('screened', 1, true), e('screened', 0, false)];
-    expect(roundProgress(entries, 2, 'running')).toEqual({ active: 3, done: 1 });
-    expect(roundProgress(entries, 2, 'done')).toEqual({ active: 0, done: 0 });
+    const before = [e('a', 'screened', 1, true, 200), e('b', 'screened', 1, true, 200), e('c', 'screened', 1, true, 200), e('d', 'screened', 0, false, 200)];
+    const start = roundStart(before, 2, 'running');
+    expect([...start.keys()]).toEqual(['a', 'b', 'c']);
+    expect(roundProgress(before, 2, 'running', start)).toEqual({ active: 3, done: 0 });
+    const after = [e('a', 'screened', 1, true, 400), e('b', 'screened', 1, true, 200), e('c', 'screened', 1, true, 400), e('d', 'screened', 0, false, 200)];
+    expect(roundProgress(after, 2, 'running', start)).toEqual({ active: 3, done: 2 });
+    expect(roundProgress(after, 2, 'done', start)).toEqual({ active: 0, done: 0 });
+    // Full cards count when complete.
+    const full = [e('a', 'full', 2, false, 2500), e('b', 'full', 2, true, 2500)];
+    expect(roundProgress(full, 3, 'running', null)).toEqual({ active: 2, done: 1 });
   });
 
   it('formats one-step information in bits', () => {

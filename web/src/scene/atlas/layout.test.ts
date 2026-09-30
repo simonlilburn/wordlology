@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CARD_H,
   CARD_W,
+  CARD_TOOLBAR_H,
   cardRegion,
   cardView,
   cellRect,
@@ -74,6 +75,21 @@ describe('views', () => {
     expect(t.ty).toBeGreaterThanOrEqual(0);
     expect(t.tx + (g.dashedCol.x + 40) * t.s).toBeLessThan(vp.width);
     expect(t.ty + (g.dashedRow.y + 40) * t.s).toBeLessThan(vp.height);
+  });
+
+  it('gives phones a compact card view that keeps the card clear of the toolbar', () => {
+    const r = cellRect(gridLayout(1, 1), 0, 0);
+    const vp = { left: 0, top: 0, width: 390, height: 460 };
+    const v = cardView(r, vp);
+    const t = viewTransform(v, vp);
+    // Wider than the desktop layout would make it, and still with a peek at the "+ Strategy" card.
+    expect(CARD_W * v.scale).toBeGreaterThan(260);
+    expect(t.tx).toBeGreaterThanOrEqual(0);
+    expect(t.tx + CARD_W * t.s).toBeLessThan(vp.width);
+    expect(t.tx + (CARD_W + GAP) * t.s).toBeLessThan(vp.width);
+    // The card's bottom sits above the toolbar reserve.
+    expect(t.ty + CARD_H * t.s).toBeLessThanOrEqual(vp.height - CARD_TOOLBAR_H + 1);
+    expect(cardRegion(r, true).w).toBeLessThan(cardRegion(r).w);
   });
 
   it('interpolates centres linearly and scales geometrically', () => {

@@ -110,27 +110,55 @@ export function rankingCsv(r: Pick<Ranking, 'id' | 'fixedKind' | 'fixedValue' | 
 }
 
 /** What a ranking panel needs to know about an entry beyond the model's fields. */
-type EntryLike = Pick<RankingEntry, 'stage' | 'round' | 'provisional' | 'scoreKind'>;
+type EntryLike = Pick<RankingEntry, 'key' | 'stage' | 'round' | 'provisional' | 'scoreKind' | 'targets' | 'replicates'>;
 
 /**
  * Whether an entry was screened out. The model reports candidates still in
- * the running as stage "screened" too (they are not full cards yet); while a
- * ranking runs, those were evaluated in the current round (round − 1).
+ * the running as stage "screened" too (they are not full cards yet); those
+ * were evaluated in the current round (round − 1). When a ranking finishes,
+ * every entry without a full card was screened out; when it is cancelled,
+ * the candidates of the interrupted round were not.
  */
 export function isScreenedOut(e: EntryLike, round: number, status: Ranking['status']): boolean {
   if (e.stage !== 'screened') return false;
-  if (status !== 'running') return true;
+  if (status === 'done' || status === 'error') return true;
   return (e.round ?? 0) < round - 1;
 }
 
-/** Progress within the current round: candidates still in the running and how many have finished it. */
-export function roundProgress(entries: readonly EntryLike[], round: number, status: Ranking['status']): { active: number; done: number } {
+/** The effort an entry's value reflects (changes when a round has evaluated it). */
+export function effortSignature(e: EntryLike): string {
+  return `${e.stage}|${e.scoreKind ?? ''}|${e.targets ?? 0}|${e.replicates ?? 0}`;
+}
+
+/** Signatures of the candidates in the running, taken when a round starts. */
+export function roundStart(entries: readonly EntryLike[], round: number, status: Ranking['status']): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const e of entries) if (!isScreenedOut(e, round, status)) m.set(e.key, effortSignature(e));
+  return m;
+}
+
+/**
+ * Progress within the current round: candidates still in the running and how
+ * many have finished it (a full card that is complete, or an entry whose
+ * effort changed since the round started).
+ */
+export function roundProgress(
+  entries: readonly EntryLike[],
+  round: number,
+  status: Ranking['status'],
+  start: ReadonlyMap<string, string> | null = null,
+): { active: number; done: number } {
   let active = 0, done = 0;
   if (status !== 'running') return { active, done };
   for (const e of entries) {
     if (isScreenedOut(e, round, status)) continue;
     active++;
-    if (!e.provisional) done++;
+    if (e.stage === 'full') {
+      if (!e.provisional) done++;
+    } else if (start) {
+      const s = start.get(e.key);
+      if (s !== undefined && s !== effortSignature(e)) done++;
+    }
   }
   return { active, done };
 }

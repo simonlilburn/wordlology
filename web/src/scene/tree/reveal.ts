@@ -123,10 +123,14 @@ export class RevealState {
     return n;
   }
 
-  /** Mark a node as shown without a draw-on (player paths, forced nodes). */
-  showNow(n: TrieNode): void {
+  /**
+   * Mark a node as shown without a draw-on (player paths, forced nodes).
+   * `force` also cancels a draw-on already scheduled (nodes that stay on
+   * screen while the tree morphs to another target).
+   */
+  showNow(n: TrieNode, force = false): void {
     this.ensure(n.id + 1);
-    if (Number.isNaN(this.start[n.id])) {
+    if (force || Number.isNaN(this.start[n.id])) {
       this.start[n.id] = -Infinity;
       this.dur[n.id] = 0;
     }

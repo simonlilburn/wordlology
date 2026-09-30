@@ -10,7 +10,8 @@
   import { app } from '../../app/store.svelte';
   import { openExport } from '../../export';
   import { cells, gridAxes } from '../../scene/atlas/cells';
-  import { removeColumn, removeRow } from '../../scene/atlas/interact';
+  import { setLevel } from '../../app/actions';
+  import { focusCell, openSearch, removeColumn, removeRow, toggleSelect } from '../../scene/atlas/interact';
   import { CARD_H, CARD_W, gridLayout } from '../../scene/atlas/layout';
   import { cardUi, sceneView } from '../../scene/atlas/view.svelte';
   import { fmtMean } from '../../scene/card/format';
@@ -251,6 +252,74 @@
     else return false;
     return true;
   }
+  // Keyboard: arrows move the focused card, Enter opens it (or its target
+  // search at card zoom), Space selects it for compare, and the context-menu
+  // key or Shift+F10 opens its menu. Only while no control has focus, so
+  // Enter and Space still press buttons.
+  const noControlFocused = (): boolean => {
+    const a = typeof document !== 'undefined' ? document.activeElement : null;
+    return !a || a === document.body || a instanceof HTMLCanvasElement;
+  };
+  const atCards = (): boolean => sceneView.visible && (level === 2 || level === 3) && !cardUi.menu && !headerMenu;
+  function moveFocus(dc: number, dr: number): void {
+    const f = sceneView.focus ?? [0, 0];
+    const c = Math.max(0, Math.min(axes.columns.length - 1, f[0] + dc));
+    const r = Math.max(0, Math.min(axes.rows.length - 1, f[1] + dr));
+    if (c !== f[0] || r !== f[1]) focusCell(c, r);
+  }
+  function focusedCardCentre(): { x: number; y: number } {
+    const f = sceneView.focus ?? [0, 0];
+    const s = sceneView.s;
+    return {
+      x: sceneView.tx + (f[0] * layout.pitchX + CARD_W / 2) * s,
+      y: sceneView.ty + (f[1] * layout.pitchY + CARD_H / 3) * s,
+    };
+  }
+  $effect(() => {
+    const offs = [
+      registerShortcut({
+        keys: ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'],
+        description: 'Move between cards (Card and Atlas views)',
+        when: () => atCards() && multi && noControlFocused(),
+        handler: (e) => {
+          const d: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+          const [dc, dr] = d[e.key] ?? [0, 0];
+          moveFocus(dc, dr);
+        },
+      }),
+      registerShortcut({
+        keys: ['Enter'],
+        description: 'Open the focused card (Atlas) or find a target (Card)',
+        when: () => atCards() && noControlFocused(),
+        handler: () => {
+          if (level === 3) setLevel(2);
+          else openSearch();
+        },
+      }),
+      registerShortcut({
+        keys: [' '],
+        description: 'Select the focused card for compare',
+        when: () => atCards() && noControlFocused(),
+        handler: () => {
+          const f = sceneView.focus;
+          if (f) toggleSelect(f[0], f[1]);
+        },
+      }),
+      registerShortcut({
+        keys: ['ContextMenu', 'F10'],
+        description: 'Card menu (context-menu key or Shift+F10)',
+        when: () => atCards() && !!sceneView.focus,
+        handler: (e) => {
+          if (e.key === 'F10' && !e.shiftKey) return;
+          const f = sceneView.focus!;
+          const p = focusedCardCentre();
+          cardUi.menu = { x: p.x, y: p.y, col: f[0], row: f[1] };
+        },
+      }),
+    ];
+    return () => offs.forEach((off) => off());
+  });
+
   $effect(() =>
     registerShortcut({
       keys: ['Escape'],
@@ -267,7 +336,7 @@
   <div class="toolbar" role="toolbar" aria-label="Card and atlas tools" style={toolbarStyle}>
     <button aria-pressed={cardUi.table} onclick={() => (cardUi.table = !cardUi.table)} title="Show the data as a table">Table</button>
     <button aria-pressed={cardUi.compareMode} onclick={toggleCompare} title="Tap two cards to compare them (or shift-click)">
-      Compare{#if app.atlas.selected.length} ({app.atlas.selected.length}/2){/if}
+      Compare{#if app.atlas.selected.length}{` (${app.atlas.selected.length}/2)`}{/if}
     </button>
     {#if atAtlas && multi}
       <button aria-pressed={cardUi.margins} onclick={() => (cardUi.margins = !cardUi.margins)} title="Show each row's and column's mean">Margins</button>

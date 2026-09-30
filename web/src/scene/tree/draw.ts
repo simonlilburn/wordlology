@@ -17,6 +17,8 @@ import type { RevealState } from './reveal';
 
 export interface DrawInput {
   nodes: readonly DNode[];
+  /** The focused tree's nodes by id: display nodes whose trie node is not among them belong to the tree being morphed away from. */
+  treeNodes?: readonly TrieNode[];
   s: number;
   /** Visible world rectangle (null: draw everything). */
   view: { x0: number; x1: number; y0: number; y1: number } | null;
@@ -149,15 +151,17 @@ export function drawTree(inp: DrawInput, out: DrawOutput, geomCache: GeomCache):
     }
     let a = d.alpha * A;
     if (!d.l.trunk) a *= inp.branchAlpha;
+    // A node of the previous target's tree: no per-id lookups (ids differ between trees).
+    const foreign = !!t && !!inp.treeNodes && inp.treeNodes[t.id] !== t;
     let prog = 1;
-    if (reveal && t && d.l.kind !== 'ellipsis') prog = reveal.progress(t.id, now);
+    if (reveal && t && !foreign && d.l.kind !== 'ellipsis') prog = reveal.progress(t.id, now);
     if (d.l.trunk && inp.trunkProgress < 1) prog = Math.min(prog, Math.min(1, Math.max(0, inp.trunkProgress * (N + 1) - (d.l.band - 1))));
     if (prog <= 0) continue;
-    const onHover = (t && inp.hover.has(t.id) && d.l.kind !== 'ellipsis') || (inp.hoverKey !== null && d.key === inp.hoverKey);
+    const onHover = (t && !foreign && inp.hover.has(t.id) && d.l.kind !== 'ellipsis') || (inp.hoverKey !== null && d.key === inp.hoverKey);
     let dim = false;
     if (highlight && filter) {
       if (d.l.kind === 'ellipsis') dim = d.l.hiddenMatches === 0;
-      else if (t) dim = !onMatchedPath(filter, t);
+      else if (t && !foreign) dim = !onMatchedPath(filter, t);
     }
     if (dim) a *= 0.25;
     let col: RGB = pal.river;
@@ -213,9 +217,12 @@ export function drawTree(inp: DrawInput, out: DrawOutput, geomCache: GeomCache):
       continue;
     }
     if (d.alpha <= 0.01) continue;
+    const foreign = !!t && !!inp.treeNodes && inp.treeNodes[t.id] !== t;
+    const pt = d.l.kind === 'ellipsis' ? (d.parent?.l.trie ?? null) : null;
+    const parentForeign = !!pt && !!inp.treeNodes && inp.treeNodes[pt.id] !== pt;
     let prog = 1;
-    if (reveal && t && d.l.kind !== 'ellipsis') prog = reveal.progress(t.id, now);
-    if (d.l.kind === 'ellipsis' && d.parent && reveal && d.parent.l.trie) prog = reveal.progress(d.parent.l.trie.id, now);
+    if (reveal && t && !foreign && d.l.kind !== 'ellipsis') prog = reveal.progress(t.id, now);
+    if (reveal && pt && !parentForeign) prog = reveal.progress(pt.id, now);
     let a = d.alpha * A * Math.min(1, Math.max(0, (prog - 0.55) / 0.45));
     if (d.l.trunk) a *= inp.trunkLabelAlpha;
     else a *= inp.branchAlpha;
@@ -227,13 +234,13 @@ export function drawTree(inp: DrawInput, out: DrawOutput, geomCache: GeomCache):
     let match = false;
     if (highlight && filter) {
       if (d.l.kind === 'ellipsis') dim = d.l.hiddenMatches === 0;
-      else if (t) {
+      else if (t && !foreign) {
         dim = !onMatchedPath(filter, t);
         match = d.l.kind === 'node' && filter.match[t.id] === 1;
       }
     }
     if (dim) a *= 0.25;
-    const onHover = t !== null && inp.hover.has(t.id) && d.l.kind !== 'ellipsis';
+    const onHover = t !== null && !foreign && inp.hover.has(t.id) && d.l.kind !== 'ellipsis';
     const la = a * inp.labelAlpha;
     if (g.mode === 'tick') {
       const tw = Math.min(10 * px, (d.l.right - d.l.left) * 0.6);

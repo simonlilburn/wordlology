@@ -91,20 +91,31 @@ export function fitView(r: Rect, vp: Viewport, m: Margins, maxScale = 3): View {
   return { cx: r.x + r.w / 2 - offX, cy: r.y + r.h / 2 - offY, scale };
 }
 
+/** Screen px kept free below the Card view for the card toolbar. */
+export const CARD_TOOLBAR_H = 60;
+/** Viewports narrower than this (phones) get a compact Card view with smaller peeks. */
+export const COMPACT_VIEWPORT = 600;
+
 /**
  * The Card view of one cell: the card large, with the right and lower
- * neighbours (or the dashed "+ Strategy" / "+ Opener" cards) peeking in.
+ * neighbours (or the dashed "+ Strategy" / "+ Opener" cards) peeking in, and
+ * room below for the toolbar. Narrow viewports peek less, so the card stays
+ * legible on a phone.
  */
 export function cardView(r: Rect, vp: Viewport, maxScale = 2.4): View {
-  const region = cardRegion(r);
-  const scale = Math.min(maxScale, (vp.width * 0.96) / region.w, (vp.height * 0.96) / region.h);
-  return { cx: region.x + region.w / 2, cy: region.y + region.h / 2, scale: Math.max(0.05, scale) };
+  const compact = vp.width < COMPACT_VIEWPORT;
+  const region = cardRegion(r, compact);
+  const reserve = Math.min(CARD_TOOLBAR_H, vp.height * 0.15);
+  const h = Math.max(40, vp.height - reserve);
+  const scale = Math.max(0.05, Math.min(maxScale, (vp.width * 0.96) / region.w, (h * 0.96) / region.h));
+  // Centre the region in the viewport above the toolbar reserve.
+  return { cx: region.x + region.w / 2, cy: region.y + region.h / 2 + reserve / 2 / scale, scale };
 }
 
 /** The layout region the Card view fits: the card plus a peek at its right and lower neighbours. */
-export function cardRegion(r: Rect): Rect {
-  const pad = 20;
-  const peekX = Math.round(CARD_W * 0.42), peekY = Math.round(CARD_H * 0.3);
+export function cardRegion(r: Rect, compact = false): Rect {
+  const pad = compact ? 12 : 20;
+  const peekX = Math.round(CARD_W * (compact ? 0.16 : 0.42)), peekY = Math.round(CARD_H * (compact ? 0.1 : 0.3));
   return { x: r.x - pad, y: r.y - pad, w: r.w + pad + GAP + peekX, h: r.h + pad + GAP + peekY };
 }
 

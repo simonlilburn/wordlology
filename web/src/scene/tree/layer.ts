@@ -213,12 +213,12 @@ class TreeLayer implements SceneLayer {
   }
 
   /** Dev and end-to-end tests: every drawn node with its screen box (CSS px). */
-  debugNodes(): { key: string; kind: string; word: string; id: number; x: number; y: number; w: number; h: number; mode: string; trunk: boolean }[] {
+  debugNodes(all = false): { key: string; kind: string; word: string; id: number; x: number; y: number; w: number; h: number; mode: string; trunk: boolean; alpha: number; dying: boolean }[] {
     const words = app.words;
     const out: ReturnType<TreeLayer['debugNodes']> = [];
     if (!words) return out;
     for (const d of this.morph.order) {
-      if (d.dying || d.l.kind === 'root') continue;
+      if ((d.dying && !all) || d.l.kind === 'root') continue;
       const g = this.geomCache.get(d);
       const p = camToScreen(this.cam, this.vp, d.x, d.y);
       const t = d.l.trie;
@@ -233,6 +233,8 @@ class TreeLayer implements SceneLayer {
         h: g ? g.h * this.cam.s : 0,
         mode: g ? g.mode : 'hidden',
         trunk: d.l.trunk,
+        alpha: d.alpha,
+        dying: d.dying,
       });
     }
     return out;
@@ -394,6 +396,7 @@ class TreeLayer implements SceneLayer {
       const morphing = !!old && app.z > 0.5 && !f.reducedMotion;
       if (!morphing) this.morph.clear();
       this.morphDur = morphing ? TARGET_MORPH_MS : 0;
+      this.morphArrival = morphing;
     }
     if (!tree) return;
     if (tree.version !== this.treeVersion) {
@@ -405,6 +408,8 @@ class TreeLayer implements SceneLayer {
   }
 
   private morphDur = 0;
+  /** The next layout is the first of a tree that morphs in from another target. */
+  private morphArrival = false;
 
   private trunkGuesses(tree: TargetTree): number[] {
     const id = app.focus.node;
@@ -617,6 +622,15 @@ class TreeLayer implements SceneLayer {
       ellipsisPx: (count, games) => ellipsisSlotPx(count, games, advance, threshold, fmtInt),
     });
     const first = !this.layout;
+    if (this.morphArrival) {
+      // Nodes on screen in both trees (the shared root and opener, common
+      // paths) glide to their new places; they are not drawn on again.
+      this.morphArrival = false;
+      for (const l of layout.nodes) {
+        const d = this.morph.nodes.get(l.key);
+        if (l.trie && d && !d.dying) r.showNow(l.trie, true);
+      }
+    }
     this.layout = layout;
     this.params = params;
     this.trunkIds = trunk.map((n) => n.id);
@@ -972,6 +986,7 @@ class TreeLayer implements SceneLayer {
     drawTree(
       {
         nodes: this.morph.order,
+        treeNodes: tree.nodes,
         s: this.cam.s,
         view,
         bandLabelX,

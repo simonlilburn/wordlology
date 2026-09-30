@@ -16,7 +16,7 @@
     removeRow,
     toggleSelect,
   } from '../../scene/atlas/interact';
-  import { gridLayout, type Rect } from '../../scene/atlas/layout';
+  import { CARD_H, CARD_W, gridLayout, type Rect } from '../../scene/atlas/layout';
   import { cardUi, sceneView } from '../../scene/atlas/view.svelte';
   import { summarise, type CardSummary } from './summary';
 
@@ -62,6 +62,17 @@
     return { col: g.dashedCol, row: g.dashedRow };
   });
   const dashedAlpha = $derived(sceneView.visible ? sceneView.dashedAlpha : 0);
+
+  // A ring around the focused card in the Atlas (where the camera goes on zooming in).
+  const focusRing = $derived.by(() => {
+    const f = sceneView.focus;
+    if (!f || !sceneView.visible || !sceneView.grid || sceneView.headerAlpha < 0.02) return null;
+    const g = gridLayout(sceneView.cols, sceneView.rows);
+    const s = sceneView.s;
+    const pad = 5;
+    const x = sceneView.tx + f[0] * g.pitchX * s - pad, y = sceneView.ty + f[1] * g.pitchY * s - pad;
+    return `left:${x.toFixed(1)}px;top:${y.toFixed(1)}px;width:${(CARD_W * s + 2 * pad).toFixed(1)}px;height:${(CARD_H * s + 2 * pad).toFixed(1)}px;opacity:${sceneView.headerAlpha.toFixed(3)}`;
+  });
 
   function rectStyle(r: Rect, alpha: number): string {
     const s = sceneView.s;
@@ -146,6 +157,10 @@
 </script>
 
 <svelte:window onpointerdown={outside} />
+
+{#if focusRing}
+  <div class="focus-ring" style={focusRing} aria-hidden="true"></div>
+{/if}
 
 {#if sceneView.visible && dashedAlpha > 0.02}
   <div class="dashed-layer" inert={dashedAlpha < 0.5}>
@@ -250,6 +265,14 @@
 {/if}
 
 <style>
+  .focus-ring {
+    position: fixed;
+    z-index: 5;
+    pointer-events: none;
+    box-sizing: border-box;
+    border: 2px solid var(--accent);
+    border-radius: 16px;
+  }
   .dashed-layer {
     position: fixed;
     inset: 0;

@@ -66,6 +66,7 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
   let idle = true;
   const errors = new WeakSet<SceneLayer>();
   const v = new THREE.Vector3();
+  const clear = new THREE.Color();
   let sidePane: Element | null = null;
 
   const ctx: SceneContext = {
@@ -130,7 +131,8 @@ export function createScene(canvas: HTMLCanvasElement): SceneApi {
       });
     }
     const pal = palette();
-    renderer.setClearColor(new THREE.Color(pal.bg[0], pal.bg[1], pal.bg[2]), 1);
+    // Palette colours are sRGB (CSS); three.js colours are linear unless told otherwise.
+    renderer.setClearColor(clear.setRGB(pal.bg[0], pal.bg[1], pal.bg[2], THREE.SRGBColorSpace), 1);
     renderer.render(scene, ctx.camera === 'persp' ? persp : ortho);
     if (animating) schedule();
     else idle = true;

@@ -14,7 +14,7 @@
   import { sceneView } from '../../scene/atlas/view.svelte';
   import { gridAxes } from '../../scene/atlas/cells';
   import { cardTheme, prefersDark, rampPositions, rgbCss, rowFill } from '../../scene/card/ramp';
-  import { fmtEntryValue, fmtMetric, isScreenedOut, METRIC_LABELS, rankingCsv, ReorderThrottle, roundProgress, tieBrackets } from './ranking';
+  import { fmtEntryValue, fmtMetric, isScreenedOut, METRIC_LABELS, rankingCsv, ReorderThrottle, roundProgress, roundStart, tieBrackets } from './ranking';
 
   type Request = { kind: 'row'; opener: string | null } | { kind: 'column'; strategy: string };
   let { request, onclose }: { request: Request; onclose: () => void } = $props();
@@ -59,9 +59,17 @@
   const throttle = new ReorderThrottle(500);
   let timer: ReturnType<typeof setTimeout> | null = null;
 
+  // Effort of each candidate when the current round started (for progress within the round).
+  let startRound = -1;
+  let startSigs: Map<string, string> | null = null;
+
   function refresh(): void {
     const r = ranking;
     if (!r) return;
+    if (r.round !== startRound) {
+      startRound = r.round;
+      startSigs = roundStart(r.entries, r.round, r.status);
+    }
     version++;
     const next = [...r.entries].sort((a, b) => a.rank - b.rank || a.key.localeCompare(b.key)).map((e) => e.key);
     const res = throttle.offer(next, performance.now());
@@ -120,7 +128,7 @@
       metric: r.metric,
       list,
       total: all.length,
-      progress: roundProgress(r.entries, r.round, r.status),
+      progress: roundProgress(r.entries, r.round, r.status, startSigs),
       brackets: tieBrackets(list.map((e) => e.tieGroup)),
     };
   });
@@ -164,7 +172,7 @@
     return parts.join(', ');
   }
 
-  function add(e: RankingEntry): void {
+  function add(e: RankingEntry, quiet = false): void {
     try {
       if (request.kind === 'row') {
         const s = findStrategy(e.key) ?? {
@@ -174,11 +182,11 @@
           spec: e.spec ?? { kind: 'max_info', pool: 'candidates' },
         };
         addColumn(plain(s));
-        toast(`Added ${s.label} as a column`);
+        if (!quiet) toast(`Added ${s.label} as a column`);
       } else {
         const o = e.opener !== undefined ? e.opener : e.key;
         addRow(o ? o.toLowerCase() : null);
-        toast(`Added ${o ? o.toUpperCase() : "strategy's choice"} as a row`);
+        if (!quiet) toast(`Added ${o ? o.toUpperCase() : "strategy's choice"} as a row`);
       }
     } catch (err) {
       console.warn('[ranking]', err);
@@ -186,7 +194,9 @@
   }
 
   function addTop5(): void {
-    for (const e of (view?.list ?? []).slice(0, 5)) add(e);
+    const top = (view?.list ?? []).slice(0, 5);
+    for (const e of top) add(e, true);
+    if (top.length) toast(`Added the top ${top.length} as ${request.kind === 'row' ? 'columns' : 'rows'}`);
   }
 
   function exportCsv(): void {
@@ -253,7 +263,7 @@
         {#if view}
           by {METRIC_LABELS[view.metric]} ·
           {#if view.status === 'running'}
-            round {view.round} of {view.rounds}{#if view.progress.active} · {view.progress.done.toLocaleString('en-US')} / {view.progress.active.toLocaleString('en-US')} evaluated{/if}
+            {`round ${view.round} of ${view.rounds}`}{view.progress.active ? ` · ${view.progress.done.toLocaleString('en-US')} / ${view.progress.active.toLocaleString('en-US')} evaluated` : ''}
           {:else if view.status === 'done'}done{:else}{view.status}{/if}
         {:else}
           by {METRIC_LABELS[app.result.rankMetric]}
