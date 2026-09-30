@@ -42,7 +42,12 @@ pub fn bench(args: &Args) -> Result<()> {
     let mut rows = Vec::new();
 
     let (matrix, ms) = time(|| PatternMatrix::build(&list));
-    rows.push(Row { measure: format!("pattern matrix build ({ng} x {na})"), target_ms: 500.0, ms, note: String::new() });
+    rows.push(Row {
+        measure: format!("pattern matrix build ({ng} x {na})"),
+        target_ms: 500.0,
+        ms,
+        note: String::new(),
+    });
     let engine = Arc::new(Engine::with_matrix(list, matrix));
     let opener = args.get("opener").unwrap_or("crane").to_string();
     let config = |spec: StrategySpec, opener: Option<&str>, r: u32| {
@@ -98,10 +103,7 @@ pub fn bench(args: &Args) -> Result<()> {
     println!("{:<62} {:>10} {:>10}  status", "measure", "target", "native");
     for r in &rows {
         let status = if r.ms <= r.target_ms { "ok" } else { "SLOW" };
-        println!(
-            "{:<62} {:>7.0} ms {:>7.0} ms  {status}  {}",
-            r.measure, r.target_ms, r.ms, r.note
-        );
+        println!("{:<62} {:>7.0} ms {:>7.0} ms  {status}  {}", r.measure, r.target_ms, r.ms, r.note);
     }
     Ok(())
 }

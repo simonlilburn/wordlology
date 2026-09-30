@@ -1,0 +1,719 @@
+{
+  "entries": [
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": null,
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "max_info",
+          "pool": "candidates"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "749b6ec28683f052",
+      "deterministic": true,
+      "file": "749b6ec28683f052-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "max_info"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "max_info"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "crane",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "max_info",
+          "pool": "candidates"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "fc21f8a0a58592fc",
+      "deterministic": true,
+      "file": "fc21f8a0a58592fc-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "max_info"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "max_info"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "slate",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "max_info",
+          "pool": "candidates"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "f75b2dc37a0d0be7",
+      "deterministic": true,
+      "file": "f75b2dc37a0d0be7-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "max_info"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "max_info"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "trace",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "max_info",
+          "pool": "candidates"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "cc4d6d6345930e45",
+      "deterministic": true,
+      "file": "cc4d6d6345930e45-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "max_info"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "max_info"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "raise",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "max_info",
+          "pool": "candidates"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "aec142c061dba64f",
+      "deterministic": true,
+      "file": "aec142c061dba64f-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "max_info"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "max_info"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "adieu",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "max_info",
+          "pool": "candidates"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "08d38516cb911240",
+      "deterministic": true,
+      "file": "08d38516cb911240-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "max_info"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "max_info"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": null,
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "max_info",
+          "pool": "allowed"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "cef7079434f71400",
+      "deterministic": true,
+      "file": "cef7079434f71400-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "max_info"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "max_info"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "crane",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "max_info",
+          "pool": "allowed"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "72aa0117eac355f9",
+      "deterministic": true,
+      "file": "72aa0117eac355f9-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "max_info"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "max_info"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "slate",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "max_info",
+          "pool": "allowed"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "5d14e806027997da",
+      "deterministic": true,
+      "file": "5d14e806027997da-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "max_info"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "max_info"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "trace",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "max_info",
+          "pool": "allowed"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "75851904592f4047",
+      "deterministic": true,
+      "file": "75851904592f4047-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "max_info"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "max_info"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "raise",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "max_info",
+          "pool": "allowed"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "d41cf6d222750e84",
+      "deterministic": true,
+      "file": "d41cf6d222750e84-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "max_info"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "max_info"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "adieu",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "max_info",
+          "pool": "allowed"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "6768cc42f64565f2",
+      "deterministic": true,
+      "file": "6768cc42f64565f2-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "max_info"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "max_info"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": null,
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "most_frequent"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "eb582387f3798230",
+      "deterministic": true,
+      "file": "eb582387f3798230-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "most_frequent"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "most_frequent"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "crane",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "most_frequent"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "e500adf9ceaf1882",
+      "deterministic": true,
+      "file": "e500adf9ceaf1882-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "most_frequent"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "most_frequent"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "slate",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "most_frequent"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "7685769103895585",
+      "deterministic": true,
+      "file": "7685769103895585-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "most_frequent"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "most_frequent"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "trace",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "most_frequent"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "2d3469a7eb1feb11",
+      "deterministic": true,
+      "file": "2d3469a7eb1feb11-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "most_frequent"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "most_frequent"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "raise",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "most_frequent"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "617c6dafa25623f8",
+      "deterministic": true,
+      "file": "617c6dafa25623f8-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "most_frequent"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "most_frequent"
+        ]
+      }
+    },
+    {
+      "config": {
+        "base_seed": 1,
+        "opener": "adieu",
+        "replicates": 1,
+        "rules": {
+          "hard_mode": false,
+          "max_guesses": 6
+        },
+        "strategy": {
+          "kind": "most_frequent"
+        },
+        "weighting": "equal",
+        "word_list": {
+          "answers": {
+            "kind": "default"
+          },
+          "id": "open-en-5",
+          "version": "1.0.0"
+        }
+      },
+      "config_id": "a2d26c231507b693",
+      "deterministic": true,
+      "file": "a2d26c231507b693-all.wlgb",
+      "n_games": 2500,
+      "phases": [
+        "most_frequent"
+      ],
+      "replicates": 1,
+      "scope": {
+        "targets": "all"
+      },
+      "summary": {
+        "deterministic": true,
+        "phases": [
+          "most_frequent"
+        ]
+      }
+    }
+  ],
+  "solver_version": "0.1.0"
+}

@@ -52,9 +52,7 @@ impl Args {
 
     /// Parse an option's value.
     pub fn parsed<T: std::str::FromStr>(&self, name: &str) -> Result<Option<T>, String> {
-        self.get(name)
-            .map(|v| v.parse::<T>().map_err(|_| format!("--{name}: cannot parse {v:?}")))
-            .transpose()
+        self.get(name).map(|v| v.parse::<T>().map_err(|_| format!("--{name}: cannot parse {v:?}"))).transpose()
     }
 
     /// Names of options given that are not in `known` (typos).

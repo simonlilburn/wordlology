@@ -58,10 +58,16 @@ fn err(e: EngineError) -> JsError {
 
 /// Build the word list; answers are sorted alphabetically (by word id), so
 /// answer indices are stable for a selection whatever order they came in.
-fn load_list(manifest_json: &str, guesses: &str, answers: &str, frequencies: Option<&str>) -> Result<WordList, JsError> {
+fn load_list(
+    manifest_json: &str,
+    guesses: &str,
+    answers: &str,
+    frequencies: Option<&str>,
+) -> Result<WordList, JsError> {
     let manifest: Manifest =
         serde_json::from_str(manifest_json).map_err(|e| JsError::new(&format!("bad manifest: {e}")))?;
-    let list = WordList::from_texts(manifest, guesses, answers, frequencies).map_err(|e| JsError::new(&e.to_string()))?;
+    let list =
+        WordList::from_texts(manifest, guesses, answers, frequencies).map_err(|e| JsError::new(&e.to_string()))?;
     let mut ids = list.answers().to_vec();
     if ids.windows(2).all(|w| w[0] < w[1]) {
         return Ok(list);
@@ -85,7 +91,13 @@ impl Solver {
         let t0 = clock();
         let engine = Engine::new(list);
         let matrix_ms = clock() - t0;
-        Ok(Solver { engine: Arc::new(engine), matrix_ms, runs: HashMap::new(), finished: Default::default(), next_run: 1 })
+        Ok(Solver {
+            engine: Arc::new(engine),
+            matrix_ms,
+            runs: HashMap::new(),
+            finished: Default::default(),
+            next_run: 1,
+        })
     }
 
     /// `wl_core::SOLVER_VERSION`.
@@ -215,7 +227,8 @@ impl Solver {
     ) -> Result<Vec<u8>, JsError> {
         let prep = self.engine.prepare_json(config_json).map_err(err)?;
         let prefix = api::parse_guesses(&self.engine, history_json).map_err(err)?;
-        let target = u16::try_from(target).map_err(|_| JsError::new(&format!("target {target} is not an answer index")))?;
+        let target =
+            u16::try_from(target).map_err(|_| JsError::new(&format!("target {target} is not an answer index")))?;
         if replicate > u16::MAX as u32 {
             return Err(JsError::new(&format!("replicate {replicate} is out of range")));
         }

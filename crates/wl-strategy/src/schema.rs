@@ -39,13 +39,25 @@ pub struct ParamField {
 #[derive(Clone, Debug, Serialize, PartialEq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ParamType {
-    Number { min: f64, max: f64, step: f64 },
-    Integer { min: i64, max: i64 },
+    Number {
+        min: f64,
+        max: f64,
+        step: f64,
+    },
+    Integer {
+        min: i64,
+        max: i64,
+    },
     Boolean,
     /// One of a fixed set of string values.
-    Choice { options: Vec<ChoiceOption> },
+    Choice {
+        options: Vec<ChoiceOption>,
+    },
     /// A list of words from the guess list.
-    Words { min: usize, max: usize },
+    Words {
+        min: usize,
+        max: usize,
+    },
     /// A nested strategy spec.
     Strategy,
     /// A list of nested strategy specs.

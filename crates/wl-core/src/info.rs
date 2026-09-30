@@ -1,8 +1,8 @@
 //! Entropy and expected information.
 
 use crate::bitset::CandidateSet;
-use crate::matrix::PatternMatrix;
 use crate::math;
+use crate::matrix::PatternMatrix;
 use crate::words::WordId;
 
 /// Entropy in bits of the distribution given by `counts` summing to `total`.

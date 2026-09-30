@@ -285,8 +285,17 @@ pub fn configs_csv(configs: &[ExportConfig], opts: &ExportOptions) -> String {
 }
 
 pub fn games_csv(list: &WordList, rows: &[(&ExportConfig, Vec<&Game>)]) -> String {
-    let mut t =
-        Table::new(&["game_id", "config_id", "target", "replicate", "n_guesses", "solved", "outcome", "path", "is_player"]);
+    let mut t = Table::new(&[
+        "game_id",
+        "config_id",
+        "target",
+        "replicate",
+        "n_guesses",
+        "solved",
+        "outcome",
+        "path",
+        "is_player",
+    ]);
     for (c, games) in rows {
         for g in games {
             t.row([
@@ -587,7 +596,12 @@ impl Level {
 }
 
 /// Every file of a level's export, as (file name, contents), in a fixed order.
-pub fn export_files(list: &WordList, level: &Level, configs: &[ExportConfig], opts: &ExportOptions) -> Vec<(String, String)> {
+pub fn export_files(
+    list: &WordList,
+    level: &Level,
+    configs: &[ExportConfig],
+    opts: &ExportOptions,
+) -> Vec<(String, String)> {
     let tree_target = match level {
         Level::Tree { target } => Some(*target),
         _ => None,
@@ -671,8 +685,21 @@ mod tests {
 
     #[test]
     fn ranking_table() {
-        let entries = vec![RankEntry { name: "crane".into(), value: 3.5, ci_low: 3.4, ci_high: 3.6, fail_rate: 0.004, full: true }];
-        let rows = ranking_rows("r1", "strategy", "max_info", RankMetric::Mean, &crate::card::rank_entries(entries, RankMetric::Mean));
+        let entries = vec![RankEntry {
+            name: "crane".into(),
+            value: 3.5,
+            ci_low: 3.4,
+            ci_high: 3.6,
+            fail_rate: 0.004,
+            full: true,
+        }];
+        let rows = ranking_rows(
+            "r1",
+            "strategy",
+            "max_info",
+            RankMetric::Mean,
+            &crate::card::rank_entries(entries, RankMetric::Mean),
+        );
         assert_eq!(
             ranking_csv(&rows),
             "ranking_id,fixed_kind,fixed_value,entry,rank,metric,value,ci_low,ci_high,fail_rate,stage\n\
@@ -683,7 +710,10 @@ mod tests {
     #[test]
     fn quoting() {
         assert_eq!(escape_field("plain"), "plain");
-        assert_eq!(escape_field(r#"{"kind":"max_info","pool":"allowed"}"#), r#""{""kind"":""max_info"",""pool"":""allowed""}""#);
+        assert_eq!(
+            escape_field(r#"{"kind":"max_info","pool":"allowed"}"#),
+            r#""{""kind"":""max_info"",""pool"":""allowed""}""#
+        );
         assert_eq!(escape_field("a\nb"), "\"a\nb\"");
         let mut t = Table::new(&["a", "b"]);
         t.row(["1".to_string(), "x,y".to_string()]);

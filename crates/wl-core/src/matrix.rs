@@ -56,11 +56,7 @@ impl PatternMatrix {
     /// in slices (so a worker can report progress or yield between them).
     pub fn alloc(list: &WordList) -> PatternMatrix {
         let n = list.n_guesses() * list.n_answers();
-        let data = if n_patterns(list.word_len()) <= 256 {
-            Storage::U8(vec![0; n])
-        } else {
-            Storage::U16(vec![0; n])
-        };
+        let data = if n_patterns(list.word_len()) <= 256 { Storage::U8(vec![0; n]) } else { Storage::U16(vec![0; n]) };
         PatternMatrix { n_guesses: list.n_guesses(), n_answers: list.n_answers(), word_len: list.word_len(), data }
     }
 
@@ -171,11 +167,7 @@ impl PatternMatrix {
             let p = row.get(a).0 as usize;
             buckets[p].get_or_insert_with(|| CandidateSet::empty(cands.universe())).insert(a);
         }
-        buckets
-            .into_iter()
-            .enumerate()
-            .filter_map(|(p, s)| s.map(|s| (Pattern(p as u16), s)))
-            .collect()
+        buckets.into_iter().enumerate().filter_map(|(p, s)| s.map(|s| (Pattern(p as u16), s))).collect()
     }
 }
 

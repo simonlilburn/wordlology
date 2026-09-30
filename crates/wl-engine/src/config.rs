@@ -337,7 +337,10 @@ mod tests {
     #[test]
     fn pasted_words_are_dropped() {
         let mut c = sample();
-        c.word_list.answers = AnswerSelection::Pasted { sha256: String::new(), words: Some(vec!["Slate".into(), "crane".into(), "crane".into()]) };
+        c.word_list.answers = AnswerSelection::Pasted {
+            sha256: String::new(),
+            words: Some(vec!["Slate".into(), "crane".into(), "crane".into()]),
+        };
         let canon = c.canonicalized(false).unwrap();
         let expected = answers_sha256(&["crane", "slate"]);
         assert_eq!(canon.word_list.answers, AnswerSelection::Pasted { sha256: expected.clone(), words: None });
@@ -357,7 +360,8 @@ mod tests {
         let mut c = sample();
         c.replicates = 0;
         assert!(c.canonicalized(false).is_err());
-        assert!(Config::from_json(r#"{"word_list":{"id":"x","version":"1"},"strategy":{"kind":"max_info"},"typo":1}"#).is_err());
+        assert!(Config::from_json(r#"{"word_list":{"id":"x","version":"1"},"strategy":{"kind":"max_info"},"typo":1}"#)
+            .is_err());
         // Defaults fill in everything but the word list and strategy.
         let c = Config::from_json(r#"{"word_list":{"id":"x","version":"1"},"strategy":{"kind":"max_info"}}"#).unwrap();
         assert_eq!(c.rules, Rules::default());

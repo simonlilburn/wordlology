@@ -105,7 +105,8 @@ fn single_target_follows_one_path() {
     assert_eq!(units, games[0].n_guesses(), "one node per guess");
     assert_eq!(games[0], prepare(&e, &c).play(&e, t, 0, None));
     // A replicate range that excludes replicate 0 plays nothing.
-    let run = Run::new(e.clone(), prepare(&e, &c), &Scope { targets: Targets::List(vec![t]), replicates: Some([1, 5]) });
+    let run =
+        Run::new(e.clone(), prepare(&e, &c), &Scope { targets: Targets::List(vec![t]), replicates: Some([1, 5]) });
     assert!(run.unwrap().is_done());
 }
 
@@ -221,7 +222,8 @@ fn streams_are_keyed_on_words_across_answer_selections() {
     assert_eq!(sub_prep.strategy_json, full_prep.strategy_json);
     let w = &subset[4];
     assert_ne!(sub.list.answer_of_word(w), e.list.answer_of_word(w));
-    let seed = |p: &wl_engine::Prepared| game_seed(p.config.base_seed, &p.strategy_json, p.config.opener.as_deref(), w, 1);
+    let seed =
+        |p: &wl_engine::Prepared| game_seed(p.config.base_seed, &p.strategy_json, p.config.opener.as_deref(), w, 1);
     assert_eq!(seed(&sub_prep), seed(&full_prep));
     // The pasted hash must match the solver's answers.
     let mut wrong = sub_cfg.clone();
@@ -232,7 +234,9 @@ fn streams_are_keyed_on_words_across_answer_selections() {
 #[test]
 fn continue_game_replays_prefixes() {
     let e = reference();
-    for (spec, opener) in [(info_prop(), None), (info_prop(), Some("crane")), (max_info(Pool::Candidates), Some("slate"))] {
+    for (spec, opener) in
+        [(info_prop(), None), (info_prop(), Some("crane")), (max_info(Pool::Candidates), Some("slate"))]
+    {
         let c = config(&e, spec, opener, 10);
         let prep = prepare(&e, &c);
         for (t, r) in [(3u16, 0u32), (150, 7), (299, 3)] {

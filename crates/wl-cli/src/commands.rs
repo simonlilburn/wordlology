@@ -21,7 +21,9 @@ pub fn check_options(args: &Args, extra: &[&str]) -> Result<()> {
     known.push("help");
     match args.unknown(&known).as_slice() {
         [] => Ok(()),
-        bad => Err(format!("unknown option(s): {}", bad.iter().map(|b| format!("--{b}")).collect::<Vec<_>>().join(", "))),
+        bad => {
+            Err(format!("unknown option(s): {}", bad.iter().map(|b| format!("--{b}")).collect::<Vec<_>>().join(", ")))
+        }
     }
 }
 
@@ -78,9 +80,8 @@ pub fn play(args: &Args) -> Result<()> {
             .map(|w| list.id(w.trim()).ok_or_else(|| format!("{w:?} is not an allowed guess")))
             .collect::<Result<_>>()?,
     };
-    let game = prep
-        .continue_game(&engine, &prefix, target, replicate, args.flag("one-step"))
-        .map_err(|e| e.to_string())?;
+    let game =
+        prep.continue_game(&engine, &prefix, target, replicate, args.flag("one-step")).map_err(|e| e.to_string())?;
     if let Some(path) = args.get("out") {
         let bytes = wl_engine::batch::encode_batch(std::slice::from_ref(&game));
         std::fs::write(path, bytes).map_err(|e| format!("cannot write {path}: {e}"))?;
@@ -91,7 +92,10 @@ pub fn play(args: &Args) -> Result<()> {
         return Ok(());
     }
     println!("config {}  target {}  replicate {replicate}", prep.config_id, list.word(list.answer_word(target)));
-    println!("{:>4}  {:<7} {:<7} {:>6} {:>6} {:>7} {:>8}  phase", "turn", "guess", "fb", "before", "after", "bits", "p");
+    println!(
+        "{:>4}  {:<7} {:<7} {:>6} {:>6} {:>7} {:>8}  phase",
+        "turn", "guess", "fb", "before", "after", "bits", "p"
+    );
     for (i, t) in game.turns.iter().enumerate() {
         println!(
             "{:>4}  {:<7} {:<7} {:>6} {:>6} {:>7} {:>8}  {}",
@@ -159,7 +163,13 @@ pub fn card(args: &Args) -> Result<()> {
         println!("{:>7} {:>8} {:>9} {:>9}", "outcome", "games", "share", "se");
         for k in 0..card.shares.len() {
             let se = card.share_se.as_ref().map_or("NA".to_string(), |s| fmt_num(s[k]));
-            println!("{:>7} {:>8} {:>9} {:>9}", outcome(k, card.max_guesses), card.counts[k], fmt_num(card.shares[k]), se);
+            println!(
+                "{:>7} {:>8} {:>9} {:>9}",
+                outcome(k, card.max_guesses),
+                card.counts[k],
+                fmt_num(card.shares[k]),
+                se
+            );
         }
         println!(
             "mean {}{}  sd {}  median {}  p95 {}  solved {}  ({} games in {:.0} ms)",
@@ -225,7 +235,20 @@ impl RowFilter for CliFilter {
 pub fn export(args: &Args) -> Result<()> {
     check_options(
         args,
-        &["level", "out", "target", "exported-at", "app-version", "filter", "any", "rows", "final", "y-vowel", "only-matching", "no-pairs"],
+        &[
+            "level",
+            "out",
+            "target",
+            "exported-at",
+            "app-version",
+            "filter",
+            "any",
+            "rows",
+            "final",
+            "y-vowel",
+            "only-matching",
+            "no-pairs",
+        ],
     )?;
     let level_name = args.get("level").unwrap_or("card");
     let out = PathBuf::from(args.get("out").ok_or("export needs --out DIR")?);
@@ -270,9 +293,13 @@ pub fn export(args: &Args) -> Result<()> {
         None => None,
         Some(text) => {
             let combine = if args.flag("any") { Combine::Any } else { Combine::All };
-            let mut filter = Filter::parse(text, engine.list.word_len(), combine).map_err(|e| format!("--filter: {e}"))?;
+            let mut filter =
+                Filter::parse(text, engine.list.word_len(), combine).map_err(|e| format!("--filter: {e}"))?;
             if let Some(rows) = args.get("rows") {
-                filter.rows = rows.split(',').map(|r| r.trim().parse().map_err(|_| "--rows: bad row")).collect::<std::result::Result<_, _>>()?;
+                filter.rows = rows
+                    .split(',')
+                    .map(|r| r.trim().parse().map_err(|_| "--rows: bad row"))
+                    .collect::<std::result::Result<_, _>>()?;
             }
             filter.include_final = args.get("final") != Some("no");
             let compiled = filter.compile(args.flag("y-vowel"));
@@ -281,7 +308,9 @@ pub fn export(args: &Args) -> Result<()> {
     };
     let opts = ExportOptions {
         exported_at: args.get("exported-at").map_or_else(setup::iso_now, str::to_string),
-        app_version: args.get("app-version").map_or_else(|| format!("wordlology-cli {}", env!("CARGO_PKG_VERSION")), str::to_string),
+        app_version: args
+            .get("app-version")
+            .map_or_else(|| format!("wordlology-cli {}", env!("CARGO_PKG_VERSION")), str::to_string),
         filter: filter.as_ref().map(|f| f as &dyn RowFilter),
         only_matching: args.flag("only-matching"),
     };

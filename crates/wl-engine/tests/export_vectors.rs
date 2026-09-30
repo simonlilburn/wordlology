@@ -83,7 +83,8 @@ fn generate() -> Value {
     // targets, stopped after 9 games: every target at r = 0, three at r = 1.
     let c: Config = config(&e, StrategySpec::InfoProportional { beta: 1.0, pool: Pool::Candidates }, Some("slate"), 2);
     let prep = prepare(&e, &c);
-    let mut run = Run::new(e.clone(), prepare(&e, &c), &Scope { targets: Targets::Sample(6), replicates: None }).unwrap();
+    let mut run =
+        Run::new(e.clone(), prepare(&e, &c), &Scope { targets: Targets::Sample(6), replicates: None }).unwrap();
     let mut games = run.step_units(9);
     let p = run.progress();
     assert_eq!((p.done, p.targets_done), (9, 3));
@@ -140,7 +141,8 @@ fn write_vectors(v: &Value) -> String {
     let mut v = v.clone();
     let mut games = Vec::new();
     for (i, c) in v["configs"].as_array_mut().unwrap().iter_mut().enumerate() {
-        let lines: Vec<String> = c["games"].as_array().unwrap().iter().map(|g| serde_json::to_string(g).unwrap()).collect();
+        let lines: Vec<String> =
+            c["games"].as_array().unwrap().iter().map(|g| serde_json::to_string(g).unwrap()).collect();
         games.push(format!("[\n        {}\n      ]", lines.join(",\n        ")));
         c["games"] = json!(format!("@games{i}@"));
     }
@@ -225,11 +227,25 @@ fn export_vectors() {
     // ulp in f64, which never changes the f32 values games hold.)
     let fresh = generate();
     let games_of = |v: &Value| -> Vec<Vec<Game>> {
-        v["configs"].as_array().unwrap().iter().map(|c| c["games"].as_array().unwrap().iter().map(game_from_json).collect()).collect()
+        v["configs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["games"].as_array().unwrap().iter().map(game_from_json).collect())
+            .collect()
     };
     assert_eq!(games_of(&vectors), games_of(&fresh), "the vector's games changed; regenerate with UPDATE_GOLDEN=1");
     let meta = |v: &Value| -> Vec<Value> {
-        v["configs"].as_array().unwrap().iter().map(|c| { let mut c = c.clone(); c["games"] = Value::Null; c }).collect()
+        v["configs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| {
+                let mut c = c.clone();
+                c["games"] = Value::Null;
+                c
+            })
+            .collect()
     };
     assert_eq!(meta(&vectors), meta(&fresh), "the vector's configurations changed; regenerate with UPDATE_GOLDEN=1");
     let mut failures = Vec::new();

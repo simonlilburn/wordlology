@@ -91,7 +91,13 @@ impl Prepared {
     /// The random stream of (target, replicate).
     pub fn rng(&self, engine: &Engine, target: AnswerIdx, replicate: u32) -> rand_chacha::ChaCha8Rng {
         let word = engine.list.word(engine.list.answer_word(target));
-        crate::seed::game_rng(self.config.base_seed, &self.strategy_json, self.config.opener.as_deref(), word, replicate)
+        crate::seed::game_rng(
+            self.config.base_seed,
+            &self.strategy_json,
+            self.config.opener.as_deref(),
+            word,
+            replicate,
+        )
     }
 
     /// The seeded target order of stochastic runs: a permutation of every answer.

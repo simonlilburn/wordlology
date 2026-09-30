@@ -152,7 +152,12 @@ mod tests {
 
     #[test]
     fn ids_follow_insertion() {
-        let games = [game(&[1, 2, 7], true, false), game(&[1, 3, 7], true, false), game(&[1, 2, 7], true, false), game(&[4, 7], true, true)];
+        let games = [
+            game(&[1, 2, 7], true, false),
+            game(&[1, 3, 7], true, false),
+            game(&[1, 2, 7], true, false),
+            game(&[4, 7], true, true),
+        ];
         let t = TargetTrie::from_games(7, &games);
         let guesses: Vec<Option<u16>> = t.nodes.iter().map(|n| n.guess).collect();
         assert_eq!(guesses, vec![None, Some(1), Some(2), Some(7), Some(3), Some(7), Some(4), Some(7)]);

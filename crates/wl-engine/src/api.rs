@@ -74,7 +74,12 @@ impl Prepared {
     ///
     /// With an opener and an empty history, the only entry is the opener
     /// (phase `"opener"`, p = 1), since that is what the configuration plays.
-    pub fn scores(&self, engine: &Engine, history: &[(WordId, Pattern)], top_k: usize) -> Result<ScoresResult, EngineError> {
+    pub fn scores(
+        &self,
+        engine: &Engine,
+        history: &[(WordId, Pattern)],
+        top_k: usize,
+    ) -> Result<ScoresResult, EngineError> {
         let state = self.state_after(engine, history)?;
         let top_k = top_k.max(1);
         let candidates = state.candidates.len();
@@ -92,11 +97,7 @@ impl Prepared {
         let entries = if self.deterministic {
             // The strategy's ranking, with its actual choice first (combinators
             // may rank differently from what they play).
-            let mut entries = vec![ScoreEntry {
-                word: choice.word,
-                score: f64::NAN,
-                p: choice.p,
-            }];
+            let mut entries = vec![ScoreEntry { word: choice.word, score: f64::NAN, p: choice.p }];
             for (w, s) in self.strategy.scores(&ctx, &state, top_k + 1) {
                 if w == choice.word {
                     entries[0].score = s;
@@ -154,7 +155,9 @@ fn guess_of(engine: &Engine, v: &Value) -> Result<WordId, EngineError> {
             .filter(|&g| (g as usize) < engine.list.n_guesses())
             .map(|g| g as WordId)
             .ok_or_else(|| EngineError::Scope(format!("guess {n} is not a word id"))),
-        Value::String(w) => engine.list.id(w).ok_or_else(|| EngineError::Scope(format!("{w:?} is not an allowed guess"))),
+        Value::String(w) => {
+            engine.list.id(w).ok_or_else(|| EngineError::Scope(format!("{w:?} is not an allowed guess")))
+        }
         other => Err(EngineError::Scope(format!("bad guess {other}"))),
     }
 }
@@ -204,9 +207,10 @@ pub fn parse_guesses(engine: &Engine, json: &str) -> Result<Vec<WordId>, EngineE
     items
         .iter()
         .map(|item| match item {
-            Value::Object(m) => {
-                guess_of(engine, m.get("guess").ok_or_else(|| EngineError::Scope("a history entry needs a guess".into()))?)
-            }
+            Value::Object(m) => guess_of(
+                engine,
+                m.get("guess").ok_or_else(|| EngineError::Scope("a history entry needs a guess".into()))?,
+            ),
             v => guess_of(engine, v),
         })
         .collect()

@@ -51,9 +51,7 @@ pub fn hard_mode_violation(list: &WordList, guess: WordId, history: &[(WordId, P
             let c = pat.cell(i);
             if c == CORRECT || c == PRESENT {
                 let letter = p[i];
-                let need = (0..len)
-                    .filter(|&j| p[j] == letter && matches!(pat.cell(j), CORRECT | PRESENT))
-                    .count();
+                let need = (0..len).filter(|&j| p[j] == letter && matches!(pat.cell(j), CORRECT | PRESENT)).count();
                 let have = g.iter().filter(|&&b| b == letter).count();
                 if have < need {
                     return Some(format!("guess must contain {}", (letter as char).to_ascii_uppercase()));

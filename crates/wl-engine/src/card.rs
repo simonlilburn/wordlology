@@ -57,9 +57,7 @@ pub struct Card {
 pub fn target_weights(list: &wl_core::WordList, weighting: Weighting) -> Vec<f64> {
     match weighting {
         Weighting::Equal => vec![1.0; list.n_answers()],
-        Weighting::Frequency => {
-            list.answers().iter().map(|&id| math::pow(10.0, list.zipf_of(id) as f64)).collect()
-        }
+        Weighting::Frequency => list.answers().iter().map(|&id| math::pow(10.0, list.zipf_of(id) as f64)).collect(),
     }
 }
 
@@ -149,7 +147,8 @@ impl CardAccumulator {
             }
             (mean, math::sqrt(var / w_total))
         };
-        let (median, p95) = if n_seen == 0 { (f64::NAN, f64::NAN) } else { (quantile(&shares, 0.5), quantile(&shares, 0.95)) };
+        let (median, p95) =
+            if n_seen == 0 { (f64::NAN, f64::NAN) } else { (quantile(&shares, 0.5), quantile(&shares, 0.95)) };
         let solve_rate = if n_seen == 0 { f64::NAN } else { 1.0 - shares[m] };
 
         // Per replicate: the card of replicate r alone.
@@ -161,10 +160,8 @@ impl CardAccumulator {
             e.1 += w;
             e.2 += w * self.row_guesses(k as usize);
         }
-        let replicate_cards: Vec<(u32, Vec<f64>, f64)> = per_rep
-            .into_iter()
-            .map(|(r, (wk, w, wn))| (r, wk.iter().map(|x| x / w).collect(), wn / w))
-            .collect();
+        let replicate_cards: Vec<(u32, Vec<f64>, f64)> =
+            per_rep.into_iter().map(|(r, (wk, w, wn))| (r, wk.iter().map(|x| x / w).collect(), wn / w)).collect();
         let n_reps = replicate_cards.len();
         let (share_se, mean_se) = if self.deterministic || n_reps < 2 {
             (None, None)

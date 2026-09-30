@@ -190,7 +190,11 @@ impl Run {
         let r = prep.config.replicates;
         let reps = if prep.deterministic {
             let [a, b] = scope.replicates.unwrap_or([0, 1]);
-            if a < b.min(1) { [0, 1] } else { [0, 0] }
+            if a < b.min(1) {
+                [0, 1]
+            } else {
+                [0, 0]
+            }
         } else {
             let reps = scope.replicates.unwrap_or([0, r]);
             if reps[0] > reps[1] || reps[1] > r {
