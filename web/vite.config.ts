@@ -19,7 +19,13 @@ export default defineConfig({
   server: { headers: isolation },
   preview: { headers: isolation },
   worker: { format: 'es' },
-  build: { target: 'es2022', sourcemap: true },
+  build: {
+    target: 'es2022',
+    sourcemap: true,
+    // One app chunk of about 1 MB (300 KB gzipped); the first-load budget is
+    // 1.5 MB gzipped including WASM and the word list, so do not warn below that.
+    chunkSizeWarningLimit: 1500,
+  },
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',

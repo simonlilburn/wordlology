@@ -229,7 +229,7 @@ Worker → main thread:
 ```ts
 { type: 'loaded', key, matrixMs }
 { type: 'games', runId, buffer }          // binary batch, transferred
-{ type: 'progress', runId, ...ProgressEvent }
+{ type: 'progress', runId, ...ProgressEvent, phases? }   // the first progress event carries the phase labels
 { type: 'summary', runId, ...SummaryEvent }
 { type: 'result', reqId, data }
 { type: 'error', runId?, reqId?, message }
