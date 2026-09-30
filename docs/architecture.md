@@ -328,3 +328,14 @@ ISO 8601 times, no comments; numbers with up to 6 significant decimals.
   instance's linear memory. COOP/COEP headers are still sent.
 - **Plural rule**: words ending in `-ss` (abyss, brass, …) are not treated as
   -s plurals, so 2,455 words are removed rather than 2,461.
+
+## Known limitations
+
+- **Opener rankings** follow the specification's successive halving
+  literally: after the one-step information screen, round 2 evaluates the
+  best half (1,250 openers over the default list) as separate 200-target
+  jobs. The panel fills progressively and can be cancelled, but a full run
+  takes minutes; batching many openers into one worker job would be the
+  next step.
+- **Letter-filter vowels** follow the setting "Y counts as a vowel"; the
+  classes are otherwise fixed to English (`aeiou`).

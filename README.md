@@ -67,18 +67,42 @@ solver version bump (`wl_core::SOLVER_VERSION`); regenerate them with
 
 ## Command line
 
+The native binary shares the crates with the browser build, so it gives
+byte-identical games (checked by `scripts/check-determinism.mjs`).
+
 ```sh
-cargo run --release -p wl-cli -- --help
-cargo run --release -p wl-cli -- card --strategy '{"kind":"max_info"}' --opener crane
-cargo run --release -p wl-cli -- bench
-cargo run --release -p wl-cli -- precompute --out precomputed/
+cargo build --release -p wl-cli          # target/release/wordlology
+wordlology card --strategy '{"kind":"max_info"}' --opener crane
+wordlology play --strategy info_proportional --opener slate --target house --replicate 3
+wordlology export --level atlas --strategy max_info --strategy random \
+  --opener crane --opener slate --out out/
+wordlology bench                          # the specification's performance targets
+wordlology precompute --out precomputed/  # results served by the StaticBackend
 ```
+
+`wordlology --help` lists every option (answer selections, hard mode,
+replicates, seeds, scopes, letter filters for exports).
 
 ## Deployment
 
-The app is static. `Dockerfile` builds the WASM solver and the web app and
-serves `web/dist` with the COOP/COEP headers the workers need; `fly.toml`
-deploys it to fly.io.
+The app is static. The `Dockerfile` builds the WASM solver and the web app
+and serves `web/dist` with Caddy (`deploy/Caddyfile`), sending the COOP/COEP
+headers that make the page cross-origin isolated; `fly.toml` deploys it to
+fly.io (`fly deploy`). CI (`.github/workflows/ci.yml`) runs Rust fmt, clippy
+and tests, the WASM build and determinism check, the web type-check, unit
+and Playwright tests, and an R job that runs the copied R snippet under
+Rscript against a CLI export.
+
+## Status
+
+Everything in the specification's v1 scope is implemented: all four levels
+and their transitions, replay, the letter filter, the target browser, the
+full strategy catalogue with the Strategy Lab, rankings by successive
+halving, compare mode, exports with the R snippet, caching, precomputed
+defaults and share links. Deferred to "later", as the specification says:
+the `RemoteBackend`, exact stochastic enumeration, split-tree comparison and
+further strategies. Deviations from the specification are listed at the end
+of [docs/architecture.md](docs/architecture.md).
 
 ## Licences
 
