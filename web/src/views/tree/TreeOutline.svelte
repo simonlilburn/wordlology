@@ -229,7 +229,7 @@
     display: flex;
     flex-direction: column;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: var(--bg);
     color: var(--fg);
     box-shadow: 0 6px 22px rgb(0 0 0 / 0.14);

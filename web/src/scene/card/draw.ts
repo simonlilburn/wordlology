@@ -16,6 +16,9 @@ export const FACE = {
   radius: 14,
 };
 
+/** Left edge of the shaded figures column on a full card. */
+export const SHADE_X = FACE.plotRight + 12;
+
 /** Chip geometry: shaded rows and the mean only. */
 export const CHIP = {
   rowsTop: 20,
@@ -48,6 +51,8 @@ export interface DrawOptions {
   /** Font family stacks. */
   sans: string;
   mono: string;
+  /** Display face for the strategy name and the mean (falls back to `sans`). */
+  display?: string;
 }
 
 /** Rows region for a LOD, in layout units: [top, bottom]. */
@@ -89,6 +94,8 @@ export function drawFace(g: CanvasRenderingContext2D, k: number, d: CardDisplay,
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.clearRect(0, 0, g.canvas.width, g.canvas.height);
   g.setTransform(k, 0, 0, k, 0, 0);
+  // Both bundled faces have a width axis; the card sets them a little narrow.
+  if ('fontStretch' in g) (g as CanvasRenderingContext2D & { fontStretch: string }).fontStretch = 'semi-condensed';
   const provisional = !d.complete;
   const inset = 1;
 
@@ -109,12 +116,16 @@ export function drawFace(g: CanvasRenderingContext2D, k: number, d: CardDisplay,
   // rows. It follows the eased values, so on completion it drains away.
   const banded = d.deterministic && d.unresolvedFrac > 0.0005 && bandTopY < bottom - 0.5;
 
-  // Row shading (transparent → full ink for the largest row).
+  // Row shading (transparent → full ink for the largest row). Full cards shade
+  // only the figures column at the right edge, so the paths of the density
+  // ghost read as a tree across the rest of the card; chips have no ghost and
+  // keep full-width rows.
+  const shadeX = o.lod === 'full' ? SHADE_X : 0;
   for (let i = 0; i < n; i++) {
     const y = top + i * rowH;
     if (ramp[i] > 0.002) {
       g.fillStyle = rgbCss(rowFill(theme, ramp[i]));
-      g.fillRect(0, y, W, rowH + 0.5);
+      g.fillRect(shadeX, y, W - shadeX, rowH + 0.5);
     }
   }
   // Row rules.
@@ -216,11 +227,12 @@ function drawFullRows(
       g.fillText(rowName(i, d.maxGuesses), FACE.pad, y + rowH / 2);
       continue;
     }
+    // Figures sit on the shaded column; the row name and bar sit on paper.
     const lab = rowLabel(theme, ramp[i]);
     const cy = y + rowH / 2;
     // Row name.
-    g.fillStyle = rgbCss(lab);
-    g.font = `500 11px ${o.sans}`;
+    g.fillStyle = rgbCss(theme.muted);
+    g.font = `600 10.5px ${o.mono}`;
     g.textAlign = 'left';
     g.textBaseline = 'middle';
     g.fillText(rowName(i, d.maxGuesses), FACE.pad, cy);
@@ -228,12 +240,12 @@ function drawFullRows(
     if (o.rowBars) {
       const lo = Math.min(d.lo[i], d.shares[i]), hi = Math.max(d.hi[i], d.shares[i]);
       if (!d.complete && hi - lo > 0.0005) {
-        g.fillStyle = rgbCss(lab, 0.3);
+        g.fillStyle = rgbCss(theme.ink, 0.22);
         g.fillRect(FACE.plotLeft + lo * plotW, cy - 5.5, Math.max(0.8, (hi - lo) * plotW), 11);
       }
       const bw = d.shares[i] * plotW;
       if (bw > 0.2) {
-        g.fillStyle = rgbCss(lab, 0.92);
+        g.fillStyle = rgbCss(theme.ink, 0.92);
         g.fillRect(FACE.plotLeft, cy - 2, bw, 4);
       }
     }
@@ -243,11 +255,11 @@ function drawFullRows(
     const rowProvisional = provisional && !d.deterministic;
     g.textAlign = 'right';
     g.fillStyle = rgbCss(lab);
-    g.font = `650 14px ${o.sans}`;
-    g.fillText(fmtPercent(d.shares[i], rowProvisional), CARD_W - FACE.pad, cy - 6);
-    g.font = `400 10.5px ${o.sans}`;
+    g.font = `650 13px ${o.mono}`;
+    g.fillText(fmtPercent(d.shares[i], rowProvisional), CARD_W - FACE.pad + 2, cy - 6);
+    g.font = `400 9.5px ${o.mono}`;
     g.fillStyle = rgbCss(lab); // full strength: labels on shaded rows keep WCAG AA contrast
-    g.fillText(fmtCount(d.counts[i], rowProvisional), CARD_W - FACE.pad, cy + 9);
+    g.fillText(fmtCount(d.counts[i], rowProvisional), CARD_W - FACE.pad + 2, cy + 9);
   }
 }
 
@@ -271,9 +283,9 @@ function drawHeaderFooter(g: CanvasRenderingContext2D, d: CardDisplay, info: Fac
   // Header: strategy (colour), hard-mode badge, opener, list, sampling.
   g.textBaseline = 'middle';
   g.textAlign = 'left';
+  // Strategy colour as a small tile.
   g.fillStyle = rgbCss(hexToRgb(info.colour || '#888888'));
-  g.beginPath();
-  g.arc(P + 6, 25, 6, 0, Math.PI * 2);
+  roundRect(g, P, 18, 13, 13, 3);
   g.fill();
   let badgeW = 0;
   if (info.hardMode) {
@@ -289,15 +301,17 @@ function drawHeaderFooter(g: CanvasRenderingContext2D, d: CardDisplay, info: Fac
     g.fillText('HARD', bx + badgeW / 2, 25.5);
     g.textAlign = 'left';
   }
+  // The name in the display face, then a catalogue line in the mono face.
+  const display = o.display ?? o.sans;
   g.fillStyle = rgbCss(theme.ink);
-  g.font = `650 16px ${o.sans}`;
-  g.fillText(fitText(g, info.label, W - 2 * P - 18 - badgeW - 6), P + 18, 25);
-  g.font = `500 12.5px ${o.mono}`;
+  g.font = `800 19px ${display}`;
+  g.fillText(fitText(g, info.label, W - 2 * P - 20 - badgeW - 6), P + 20, 25.5);
+  g.font = `600 11.5px ${o.mono}`;
   const opener = info.opener ? info.opener.toUpperCase() : "strategy's choice";
   g.fillStyle = rgbCss(theme.ink);
   const openerText = info.opener ? `opener ${opener}` : opener;
-  g.fillText(fitText(g, openerText, W - 2 * P), P, 48);
-  g.font = `400 11px ${o.sans}`;
+  g.fillText(fitText(g, openerText, W - 2 * P), P, 49);
+  g.font = `400 10px ${o.mono}`;
   g.fillStyle = rgbCss(theme.muted);
   g.fillText(fitText(g, `${info.listName} · ${info.sampling}`, W - 2 * P), P, 67);
 
@@ -306,17 +320,17 @@ function drawHeaderFooter(g: CanvasRenderingContext2D, d: CardDisplay, info: Fac
   const lb = d.lowerBound;
   const mean = lb ? atLeast(fmtMean(d.mean)) : fmtMean(d.mean, d.deterministic ? null : d.meanSe, provisional);
   g.fillStyle = rgbCss(theme.ink);
-  g.font = `650 14px ${o.sans}`;
+  g.font = `800 16px ${display}`;
   g.textAlign = 'left';
   g.fillText(`mean ${mean}`, P, fy);
   g.textAlign = 'right';
-  g.font = `500 12.5px ${o.sans}`;
+  g.font = `500 10.5px ${o.mono}`;
   const solvedText = lb ? atLeast(fmtPercent(d.solveRate)) : fmtPercent(d.solveRate, provisional);
   const p95Text = lb ? atLeast(fmtQuantile(d.p95, d.maxGuesses)) : fmtQuantile(d.p95, d.maxGuesses, provisional);
   const solved = `${solvedText} solved · p95 ${p95Text}`;
   g.fillText(solved, W - P, fy);
   g.textAlign = 'left';
-  g.font = `400 10.5px ${o.sans}`;
+  g.font = `400 9.5px ${o.mono}`;
   g.fillStyle = rgbCss(theme.muted);
   const status = d.complete
     ? `${d.deterministic ? 'exact' : 'complete'} · ${fmtInt(d.nTargets)} targets · ${fmtInt(d.nGames)} games`
@@ -333,7 +347,7 @@ function drawChipFooter(g: CanvasRenderingContext2D, d: CardDisplay, info: FaceI
   g.fillStyle = rgbCss(theme.ink);
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  g.font = `700 104px ${o.sans}`;
+  g.font = `800 104px ${o.display ?? o.sans}`;
   const text = !Number.isFinite(d.mean) ? '…' : d.lowerBound ? atLeast(fmtMean(d.mean, null, true)) : fmtMean(d.mean, null, provisional);
   g.fillText(fitText(g, text, CARD_W - 24), CARD_W / 2, CHIP.rowsBottom + (CARD_H - CHIP.rowsBottom) / 2 + 2);
 }

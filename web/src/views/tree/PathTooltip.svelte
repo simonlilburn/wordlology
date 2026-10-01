@@ -106,7 +106,7 @@
     box-sizing: border-box;
     padding: 8px 10px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: var(--bg);
     color: var(--fg);
     box-shadow: 0 6px 22px rgb(0 0 0 / 0.14);

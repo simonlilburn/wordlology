@@ -81,6 +81,21 @@ export const SETTINGS: SettingDef[] = [
   {
     group: 'Game',
     kind: 'display',
+    key: 'theme',
+    label: 'Appearance',
+    defaultText: 'Light',
+    control: {
+      type: 'choice',
+      options: [
+        { value: 'light', label: 'Light' },
+        { value: 'dark', label: 'Dark' },
+        { value: 'system', label: 'Match system' },
+      ],
+    },
+  },
+  {
+    group: 'Game',
+    kind: 'display',
     key: 'palette',
     label: 'Colour palette',
     defaultText: 'Standard',

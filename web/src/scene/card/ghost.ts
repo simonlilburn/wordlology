@@ -13,7 +13,10 @@ export interface PathTurn {
   pattern: number;
 }
 
-const SPREADS = [0, 0.4, 0.2, 0.11, 0.06, 0.035, 0.02, 0.012, 0.008, 0.005];
+// Sideways step per guess. The first fan is kept narrow and later ones
+// relatively wide, so the ghost widens downward like a tree instead of
+// spreading at once into a dome under the opener.
+const SPREADS = [0, 0.16, 0.17, 0.13, 0.08, 0.05, 0.03, 0.018, 0.01, 0.006];
 
 function hash32(a: number, b: number): number {
   let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x632be5ab, 0xc2b2ae35);
@@ -60,7 +63,10 @@ export function pathXs(turns: PathTurn[], solved: boolean, maxGuesses: number, w
   return xs;
 }
 
-const smooth = (t: number) => t * t * (3 - 2 * t);
+/** Sideways progress along a segment (smoothstep: leaves the parent and reaches the child vertically). */
+const branchEase = (t: number) => t * t * (3 - 2 * t);
+/** Share of filled ghost cells below the density that maps to full opacity. */
+const GHOST_PERCENTILE = 0.98;
 
 /**
  * Points along a path in unit coordinates (x 0..1 across, y 0..1 down the rows
@@ -91,7 +97,7 @@ export function tracePath(
     const steps = Math.max(1, Math.ceil(len));
     for (let s = 0; s < steps; s++) {
       const t = s / steps;
-      emit(xa + (xb - xa) * smooth(t), ya + (yb - ya) * t);
+      emit(xa + (xb - xa) * branchEase(t), ya + (yb - ya) * t);
       count++;
     }
   }
@@ -152,23 +158,34 @@ export class DensityGrid {
   }
 
   /**
-   * Render to RGBA pixels: opacity grows with the square root of density, so
-   * single paths stay faint while the main streams show where games flow.
+   * Render to RGBA pixels. Every game runs down the root to the opener, so a
+   * scale set by the densest cell would leave the root as the only dark mark
+   * and the branches as a pale dome; a high percentile sets it instead.
+   * Opacity grows with the square root of density, so single paths stay
+   * faint while the main streams show where games flow.
    */
   toRgba(rgb: [number, number, number], maxAlpha: number, out?: Uint8ClampedArray): Uint8ClampedArray {
-    const n = this.data.length;
+    const { data } = this;
+    const n = data.length;
     const px = out && out.length === n * 4 ? out : new Uint8ClampedArray(n * 4);
-    const inv = 1 / Math.sqrt(Math.max(1e-9, this.max));
+    // Scale to the 98th percentile of filled cells: the root and the fan
+    // just under the opener (every game) saturate instead of setting the scale.
+    const filled: number[] = [];
+    for (let i = 0; i < n; i++) if (data[i] > 0) filled.push(data[i]);
+    filled.sort((a, c) => a - c);
+    let m = filled.length ? filled[Math.min(filled.length - 1, Math.floor(filled.length * GHOST_PERCENTILE))] : 0;
+    if (m <= 0) m = this.max;
+    const inv = 1 / Math.sqrt(Math.max(1e-9, m));
     const a255 = maxAlpha * 255;
     const floor = Math.min(a255, 8);
     const [r, g, b] = rgb;
     for (let i = 0; i < n; i++) {
-      const v = this.data[i];
+      const v = data[i];
       const j = i * 4;
       px[j] = r;
       px[j + 1] = g;
       px[j + 2] = b;
-      px[j + 3] = v > 0 ? Math.max(floor, Math.sqrt(v) * inv * a255) : 0;
+      px[j + 3] = v > 0 ? Math.max(floor, Math.min(1, Math.sqrt(v) * inv) * a255) : 0;
     }
     return px;
   }

@@ -309,7 +309,7 @@
     background: var(--bg);
     color: var(--fg);
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 12px 36px rgb(0 0 0 / 0.22);
     padding: 0 14px 14px;
     font-size: 13px;

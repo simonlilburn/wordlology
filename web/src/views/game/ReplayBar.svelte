@@ -156,7 +156,7 @@
     padding: 1px 8px;
     border-radius: 999px;
     background: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
     font-weight: 700;
     font-size: 0.72rem;
     letter-spacing: 0.04em;

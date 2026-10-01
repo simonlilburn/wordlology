@@ -426,10 +426,13 @@
 {/if}
 
 {#if atAtlas}
+  <!-- A labelled scroll region: focusable so keyboard users can scroll it (WCAG 2.1.1). -->
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <section
     class="means"
     class:visually-hidden={!cardUi.table}
     aria-label="Atlas table of means"
+    tabindex={cardUi.table ? 0 : undefined}
     style={cardUi.table ? `left:${sceneView.vp.left + 12}px;top:${sceneView.vp.top + 12}px` : ''}
   >
     {#if cardUi.table}
@@ -483,7 +486,7 @@
     display: flex;
     gap: 6px;
     padding: 4px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: color-mix(in srgb, var(--bg) 88%, transparent);
     border: 1px solid var(--line);
     box-shadow: 0 4px 16px rgb(0 0 0 / 0.1);
@@ -544,7 +547,7 @@
     min-height: 44px;
     padding: 0 8px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: color-mix(in srgb, var(--bg) 92%, transparent);
     color: var(--fg);
     cursor: grab;
@@ -652,7 +655,7 @@
     min-width: 44px;
     padding: 0 8px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: var(--panel);
     color: var(--fg);
     cursor: pointer;
@@ -670,7 +673,7 @@
     background: var(--bg);
     color: var(--fg);
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     box-shadow: 0 10px 34px rgb(0 0 0 / 0.22);
     padding: 6px;
     display: flex;
@@ -696,6 +699,14 @@
     opacity: 0.6;
     cursor: default;
   }
+  /* Hidden from view (still read by screen readers): clipped, not a scroll area. */
+  .means.visually-hidden {
+    overflow: hidden;
+  }
+  .means:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
   .means {
     position: fixed;
     z-index: 12;
@@ -705,7 +716,7 @@
     background: var(--bg);
     color: var(--fg);
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 12px 14px;
     box-shadow: 0 8px 30px rgb(0 0 0 / 0.18);
     font-size: 13px;

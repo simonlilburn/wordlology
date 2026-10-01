@@ -30,6 +30,8 @@
   import Keyboard from './Keyboard.svelte';
   import ReplayBar from './ReplayBar.svelte';
   import CandidateList from './CandidateList.svelte';
+  import Wordmark from '../../app/Wordmark.svelte';
+  import { paneState } from '../../panes/state.svelte';
 
   const z = $derived(Math.max(0, app.z));
   const active = $derived(gameActive());
@@ -37,6 +39,7 @@
   const fade = $derived(Math.max(0, 1 - z * 2));
   const hidden = $derived(z >= 0.999 && app.zTarget !== 0);
   const replay = $derived(inReplay());
+  const phone = $derived(paneState.phone);
 
   let areaW = $state(0);
   let areaH = $state(0);
@@ -187,24 +190,11 @@
   });
 </script>
 
-<svelte:window {onkeydown} />
-
-<section
-  class="game"
-  bind:this={root}
-  class:hidden
-  class:inactive={!active}
-  class:replay
-  class:opaque={boardShown}
-  style="--fade: {fade}; --z: {z}"
-  inert={!active}
-  aria-hidden={!active}
-  aria-label="Game"
->
-  <header class="top">
+{#snippet bar()}
+  <header class="bar" class:bottom={phone}>
     <h1 class="wordmark">
       <button type="button" class="wordmark-btn" onclick={() => (app.ui.about = true)} title="About wordlology">
-        <span class="w1">word</span><span class="w2">lology</span><span class="visually-hidden">, about</span>
+        <Wordmark size={phone ? '1.15rem' : '1.4rem'} flip /><span class="visually-hidden">, about</span>
       </button>
     </h1>
     <nav class="tools" aria-label="Game">
@@ -257,6 +247,24 @@
       </button>
     </nav>
   </header>
+{/snippet}
+
+<svelte:window {onkeydown} />
+
+<section
+  class="game"
+  bind:this={root}
+  class:hidden
+  class:inactive={!active}
+  class:replay
+  class:phone
+  class:opaque={boardShown}
+  style="--fade: {fade}; --z: {z}"
+  inert={!active}
+  aria-hidden={!active}
+  aria-label="Game"
+>
+  {#if !phone}{@render bar()}{/if}
 
   <div class="area" bind:clientWidth={areaW} bind:clientHeight={areaH} style="--area-w: {areaW}px; --area-h: {areaH}px">
     {#if app.game.message}
@@ -285,6 +293,9 @@
     <Keyboard />
   </div>
 
+  <!-- Phones: the heading sits under the keyboard, within thumb reach (and after it in reading order). -->
+  {#if phone}{@render bar()}{/if}
+
   <div class="visually-hidden" aria-live="polite" aria-atomic="true">{view.announcement}</div>
 </section>
 
@@ -304,6 +315,10 @@
     z-index: 5;
     --key-h: clamp(44px, 7.2dvh, 58px);
   }
+  .game.phone {
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
   .game.opaque {
     background: var(--bg);
   }
@@ -314,31 +329,37 @@
     visibility: hidden;
   }
 
-  .top {
+  .bar {
     flex: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    height: 52px;
+    height: 56px;
     padding: 0 8px 0 16px;
     border-bottom: 1px solid var(--line);
     opacity: var(--fade);
     transform: translateY(calc(var(--z) * -40px));
   }
+  .bar.bottom {
+    margin-top: 6px;
+    border-bottom: 0;
+    border-top: 1px solid var(--line);
+    transform: translateY(calc(var(--z) * 60px));
+  }
   .wordmark {
     margin: 0;
-    font-size: 1.35rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    white-space: nowrap;
+    font-size: inherit;
+    line-height: 1;
   }
   .wordmark-btn {
+    display: inline-flex;
+    align-items: center;
     min-height: 44px;
     padding: 0 4px;
     margin-left: -4px;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius);
     background: transparent;
     color: inherit;
     font: inherit;
@@ -348,9 +369,6 @@
   .wordmark-btn:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
-  }
-  .w2 {
-    color: var(--correct);
   }
   .tools {
     display: flex;
@@ -366,11 +384,11 @@
     gap: 6px;
     padding: 0 10px;
     border: none;
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: transparent;
     color: var(--fg);
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 0.9rem;
   }
   .tool:hover {
@@ -384,7 +402,7 @@
     .tool.text .lab {
       display: none;
     }
-    .top {
+    .bar {
       padding-left: 12px;
     }
   }
@@ -418,7 +436,7 @@
     max-width: 28rem;
     padding: 16px;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: var(--panel);
     text-align: center;
   }

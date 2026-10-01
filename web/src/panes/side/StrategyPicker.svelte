@@ -83,9 +83,10 @@
     background: color-mix(in srgb, var(--fg) 6%, transparent);
   }
   .item.current {
-    border-color: var(--line);
+    border-color: var(--fg);
     background: var(--bg);
-    font-weight: 600;
+    font-weight: 700;
+    box-shadow: inset 0 -2px 0 var(--key-edge);
   }
   .item:disabled {
     opacity: 0.5;
@@ -99,7 +100,8 @@
     flex: none;
     width: 14px;
     height: 14px;
-    border-radius: 4px;
+    border-radius: 3px;
+    box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.18);
   }
   .swatch.plus {
     display: grid;
@@ -120,8 +122,18 @@
     border-radius: 999px;
     padding: 0 6px;
   }
+  /* The selected strategy's check is a small tile in the accent green. */
   .check {
-    color: var(--accent);
+    flex: none;
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-size: 0.72rem;
+    font-weight: 800;
   }
   .why {
     margin: 0 10px 4px 34px;

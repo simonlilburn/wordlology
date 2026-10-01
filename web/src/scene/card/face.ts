@@ -3,6 +3,7 @@
 // create their own meshes that show these textures.
 
 import * as THREE from 'three';
+import { BODY, DISPLAY, MONO } from '../../app/fonts';
 import { app } from '../../app/store.svelte';
 import type { Cell } from '../atlas/cells';
 import { CARD_H, CARD_W, resolutionBucket, type Lod } from '../atlas/layout';
@@ -12,8 +13,6 @@ import { DensityGrid, pathXs } from './ghost';
 import { cardTheme, prefersDark, type CardTheme } from './ramp';
 import { SpringArray } from './spring';
 
-const SANS = "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
-const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace";
 
 export const GHOST_COLS = 150;
 export const GHOST_ROWS_PX = 240;
@@ -270,8 +269,9 @@ export class CardFace {
         selected: this.selected,
         rise: this.rise,
         frame: this.frame,
-        sans: SANS,
+        sans: BODY,
         mono: MONO,
+        display: DISPLAY,
       });
     } catch {
       /* canvas unavailable (tests) */
@@ -325,7 +325,8 @@ export class CardFace {
     const g = this.ghostG;
     if (!g) return;
     if (!this.ghostImage) this.ghostImage = g.createImageData(GHOST_COLS, GHOST_ROWS_PX);
-    this.grid.toRgba(this.theme.ghost, this.theme.dark ? 0.42 : 0.38, this.ghostImage.data);
+    // Rows are no longer shaded across the card, so the ghost can carry more weight.
+    this.grid.toRgba(this.theme.ghost, this.theme.dark ? 0.55 : 0.5, this.ghostImage.data);
     g.putImageData(this.ghostImage, 0, 0);
     this.ghostTexture.needsUpdate = true;
     this.ghostUploaded = this.grid.version;

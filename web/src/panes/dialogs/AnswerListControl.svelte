@@ -107,7 +107,7 @@
         {#if check.malformed.length}<p class="warn">Not {lexicon.wordLength}-letter words: {listSome(check.malformed)}</p>{/if}
       {/if}
       <div class="apply">
-        <button type="button" class="btn" disabled={!check || check.words.length === 0 || pastedApplied} onclick={applyPaste}>
+        <button type="button" class="btn kc" disabled={!check || check.words.length === 0 || pastedApplied} onclick={applyPaste}>
           {pastedApplied ? 'In use' : check && check.words.length ? `Use these ${fmtInt(check.words.length)} words` : 'Use these words'}
         </button>
         {#if check && (check.unknown.length || check.malformed.length) && check.words.length}

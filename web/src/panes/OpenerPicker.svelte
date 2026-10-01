@@ -178,7 +178,7 @@
     box-sizing: border-box;
     padding: 0 12px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: var(--bg);
     color: var(--fg);
     font: 600 1.1rem var(--font-mono);
@@ -218,7 +218,7 @@
     min-width: 44px;
     padding: 0 12px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: var(--bg);
     color: var(--fg);
     cursor: pointer;

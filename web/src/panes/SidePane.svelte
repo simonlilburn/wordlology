@@ -17,9 +17,12 @@
   import StrategyPicker from './side/StrategyPicker.svelte';
   import { paneState, type SheetState } from './state.svelte';
   import { clamp } from './util';
+  import Wordmark from '../app/Wordmark.svelte';
 
   const PANE_WIDTH = 340;
   const COLLAPSED_H = 72;
+  /** Phones: the bar at the foot of the sheet. */
+  const BAR_H = 56;
 
   let openerInput = $state<HTMLInputElement | null>(null);
   let filterText = $state<HTMLInputElement | null>(null);
@@ -31,7 +34,8 @@
   const shown = $derived(opacity > 0.02);
   const level = $derived(Math.round(app.zTarget));
 
-  const heights = $derived({ collapsed: COLLAPSED_H, half: Math.round(viewportH * 0.46), full: Math.max(COLLAPSED_H, viewportH - 56) });
+  // The collapsed sheet keeps its handle and the bar at its foot.
+  const heights = $derived({ collapsed: COLLAPSED_H + BAR_H, half: Math.round(viewportH * 0.46), full: Math.max(COLLAPSED_H + BAR_H, viewportH - 56) });
   let dragH = $state<number | null>(null);
   const sheetH = $derived(dragH ?? heights[paneState.sheet]);
 
@@ -127,7 +131,7 @@
     if (!dragging) return;
     const dy = dragStartY - e.clientY;
     if (Math.abs(dy) > 6) dragMoved = true;
-    if (dragMoved) dragH = clamp(dragStartH + dy, COLLAPSED_H, heights.full);
+    if (dragMoved) dragH = clamp(dragStartH + dy, heights.collapsed, heights.full);
   }
 
   function onHandleUp() {
@@ -231,15 +235,7 @@
   {/if}
 
   <div class="scroll">
-    <header class="top">
-      <h2>wordlology</h2>
-      <div class="topbtns">
-        <button type="button" class="icon" onclick={() => (app.ui.settings = true)} aria-label="Settings" title="Settings (;)">⚙</button>
-        {#if !paneState.phone}
-          <button type="button" class="icon" onclick={() => (app.ui.paneOpen = false)} aria-label="Hide side pane" title="Hide pane">»</button>
-        {/if}
-      </div>
-    </header>
+    {#if !paneState.phone}{@render bar()}{/if}
 
     <LevelButtons />
 
@@ -264,7 +260,7 @@
       <h3 id="pane-filter" class="visually-hidden">Letter filter</h3>
       <button
         type="button"
-        class="filterbtn"
+        class="filterbtn kc"
         class:on={filterOn}
         aria-expanded={paneState.filterOpen}
         aria-controls="pane-filter-builder"
@@ -283,9 +279,9 @@
     </section>
 
     <section class="tools" aria-label="Tools">
-      <button type="button" onclick={() => (app.ui.search = true)}>Find target <kbd>/</kbd></button>
-      <button type="button" onclick={doExport}>Export <kbd>E</kbd></button>
-      <button type="button" onclick={doCopyR}>Copy R code</button>
+      <button type="button" class="kc" onclick={() => (app.ui.search = true)}>Find target <kbd>/</kbd></button>
+      <button type="button" class="kc" onclick={doExport}>Export <kbd>E</kbd></button>
+      <button type="button" class="kc" onclick={doCopyR}>Copy R code</button>
     </section>
 
     <section aria-labelledby="pane-legend">
@@ -293,7 +289,32 @@
       <Legend />
     </section>
   </div>
+
+  <!-- Phones: the heading and settings sit at the foot of the sheet, visible even when it is collapsed. -->
+  {#if paneState.phone}{@render bar()}{/if}
 </aside>
+
+{#snippet bar()}
+  <header class="bar" class:bottom={paneState.phone}>
+    <h2><Wordmark size={paneState.phone ? '1.05rem' : '1.15rem'} /></h2>
+    <div class="topbtns">
+      <button type="button" class="icon kc" onclick={() => (app.ui.settings = true)} aria-label="Settings" title="Settings (;)">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"
+          ><path
+            d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z M19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-1.7-1L15 3.4h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.4 1 2-3.4z"
+            stroke="currentColor"
+            stroke-width="1.8"
+            fill="none"
+            stroke-linejoin="round"
+          /></svg
+        >
+      </button>
+      {#if !paneState.phone}
+        <button type="button" class="icon kc" onclick={() => (app.ui.paneOpen = false)} aria-label="Hide side pane" title="Hide pane">»</button>
+      {/if}
+    </div>
+  </header>
+{/snippet}
 
 <style>
   .pane {
@@ -392,22 +413,27 @@
     flex-direction: column;
     gap: 16px;
   }
-  .top {
+  .bar {
+    flex: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
   }
+  .bar.bottom {
+    min-height: 56px;
+    padding: 0 12px 0 14px;
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+  }
   h2 {
     margin: 0;
-    font-size: 1.05rem;
-    letter-spacing: 0.02em;
+    line-height: 1;
   }
   h3 {
     margin: 0 0 6px;
-    font-size: 0.78rem;
-    font-weight: 600;
+    font: 600 0.66rem var(--font-mono);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     color: var(--muted);
     display: flex;
     align-items: center;
@@ -433,12 +459,14 @@
     width: 44px;
     height: 44px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: var(--bg);
     color: var(--fg);
     cursor: pointer;
     font-size: 1.1rem;
-  }
+      display: inline-grid;
+    place-items: center;
+}
   .reopen {
     position: fixed;
     top: 10px;
@@ -453,7 +481,7 @@
     gap: 8px;
     padding: 0 10px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: var(--bg);
     color: var(--fg);
     cursor: pointer;
@@ -500,7 +528,7 @@
   .tools button {
     min-height: 44px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: var(--bg);
     color: var(--fg);
     cursor: pointer;

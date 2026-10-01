@@ -3,16 +3,16 @@
 //
 // The specification names troika-three-text for word labels; troika needs a
 // font file fetched at run time (its default comes from a CDN, which the
-// COOP/COEP headers block), so the tree uses this atlas of the system
-// monospace font instead: the same uppercase monospace look, one draw call
-// for all labels, and no network or worker dependency.
+// COOP/COEP headers block), so the tree uses this atlas of the app's bundled
+// monospace (Martian Mono, loaded before the scene starts) instead: one draw
+// call for all labels, and no network or worker dependency.
 
 import * as THREE from 'three';
 
 const FONT_PX = 48;
 const PAD = 5;
 const EXTRA = '…·✓✗→−×▸●○';
-const MONO = "ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', 'DejaVu Sans Mono', monospace";
+const MONO = "'Martian Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', 'DejaVu Sans Mono', monospace";
 
 export interface GlyphMetrics {
   /** Advance width per em. */
@@ -38,8 +38,13 @@ export class GlyphAtlas {
     const g = canvas?.getContext('2d') ?? null;
     let adv = FONT_PX * 0.6;
     const font = `600 ${FONT_PX}px ${MONO}`;
+    // Martian Mono has a width axis; semi-condensed keeps five-letter words compact.
+    const narrow = (ctx: CanvasRenderingContext2D) => {
+      if ('fontStretch' in ctx) (ctx as CanvasRenderingContext2D & { fontStretch: string }).fontStretch = 'semi-condensed';
+    };
     if (g) {
       g.font = font;
+      narrow(g);
       adv = g.measureText('M').width || adv;
     }
     const cw = Math.ceil(adv) + PAD * 2;
@@ -57,6 +62,7 @@ export class GlyphAtlas {
       canvas.width = W;
       canvas.height = H;
       g.font = font;
+      narrow(g);
       g.fillStyle = '#ffffff';
       g.textBaseline = 'alphabetic';
       g.textAlign = 'center';

@@ -92,9 +92,10 @@
     border-radius: 6px;
     background: var(--key-bg);
     color: var(--fg);
-    font-family: var(--font-sans);
+    box-shadow: inset 0 -2px 0 var(--key-edge);
+    font-family: var(--font-display);
     font-weight: 700;
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     text-transform: uppercase;
     cursor: pointer;
     display: grid;
@@ -103,7 +104,9 @@
   }
   .key.wide {
     flex: 1.5;
-    font-size: 0.78rem;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    font-weight: 600;
   }
   .key:active {
     filter: brightness(0.9);

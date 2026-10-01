@@ -18,6 +18,14 @@
     return p.filter((n) => n.depth >= 1);
   }
 
+  // Catalogue numbers: each answer's place in the alphabetical answer list, as in a field guide.
+  const catalogue = $derived.by(() => {
+    const words = app.words;
+    if (!words) return null;
+    const sorted = Array.from(words.answers, (id) => words.guesses[id]).sort();
+    return new Map(sorted.map((w, i) => [w, i + 1]));
+  });
+
   const info = $derived.by(() => {
     void live.tree;
     const id = app.focus.node;
@@ -34,8 +42,12 @@
     else if (node.endSolved > 0 && node.children.length === 0) outcome = `Solved in ${node.depth}`;
     else if (node.endFailed > 0 && node.children.length === 0) outcome = `Not solved in ${maxG}`;
     else outcome = `Partial path: ${fmtInt(node.mass)} game${node.mass === 1 ? '' : 's'} continue from here`;
+    const targetWord = words.guesses[words.answers[tree.target]] ?? '';
     return {
       target: tree.target,
+      targetWord,
+      number: catalogue?.get(targetWord) ?? 0,
+      of: words.answers.length,
       path,
       rows: path.map((n) => ({ word: words.guesses[n.guess] ?? '?', pattern: n.pattern, p: n.pEdge, player: n.player && n.mass === 0 })),
       outcome,
@@ -63,6 +75,12 @@
 
 {#if info}
   <section class="readout" aria-label="Selected path" aria-live="polite">
+    {#if info.number}
+      <p class="cat">
+        <span>No. {fmtInt(info.number)} / {fmtInt(info.of)}</span>
+        <span class="tw">{info.targetWord.toUpperCase()}</span>
+      </p>
+    {/if}
     <ol class="guesses">
       {#each info.rows as r, i (i)}
         <li>
@@ -81,8 +99,8 @@
       </p>
     {/if}
     <div class="actions">
-      <button type="button" class="primary" onclick={play}>▶ Play</button>
-      <button type="button" onclick={() => attempt(() => selectNode(-1), undefined)}>Clear</button>
+      <button type="button" class="kc primary" onclick={play}>▶ Play</button>
+      <button type="button" class="kc" onclick={() => attempt(() => selectNode(-1), undefined)}>Clear</button>
     </div>
   </section>
 {/if}
@@ -90,9 +108,24 @@
 <style>
   .readout {
     border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 10px;
+    border-radius: var(--radius);
+    padding: 10px 12px 12px;
     background: var(--bg);
+  }
+  .cat {
+    margin: 0 0 8px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font: 500 0.66rem var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .tw {
+    color: var(--fg);
+    font-weight: 700;
   }
   .guesses {
     list-style: none;
@@ -113,8 +146,13 @@
     font-variant-numeric: tabular-nums;
   }
   .outcome {
-    margin: 8px 0 2px;
-    font-weight: 600;
+    margin: 10px 0 2px;
+    font-family: var(--font-display);
+    font-stretch: 90%;
+    font-weight: 750;
+    font-size: 1.3rem;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
   }
   .prob {
     margin: 0;
@@ -130,18 +168,18 @@
   }
   button {
     min-height: 44px;
-    padding: 0 14px;
+    padding: 0 18px;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--radius);
     background: var(--bg);
     color: var(--fg);
+    font-weight: 700;
     cursor: pointer;
   }
   .primary {
-    background: var(--fg);
-    color: var(--bg);
-    border-color: var(--fg);
-    font-weight: 600;
+    background: var(--accent);
+    color: var(--on-accent);
+    border-color: var(--accent);
   }
   button:focus-visible {
     outline: 3px solid var(--accent);

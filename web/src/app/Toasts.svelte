@@ -7,6 +7,7 @@
 <div class="toasts" role="status" aria-live="polite" aria-atomic="false">
   {#each app.ui.toasts as t (t.id)}
     <div class="toast" class:error={t.kind === 'error'} role={t.kind === 'error' ? 'alert' : undefined}>
+      <span class="tile" aria-hidden="true"></span>
       <span class="text">{t.text}</span>
       <button type="button" class="close" aria-label="Dismiss" onclick={() => dismissToast(t.id)}>×</button>
     </div>
@@ -34,8 +35,9 @@
     gap: 8px;
     background: var(--fg);
     color: var(--bg);
-    border-radius: 8px;
+    border-radius: var(--radius);
     padding: 8px 8px 8px 14px;
+    font-weight: 700;
     box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
     font-size: 14px;
     line-height: 1.35;
@@ -45,8 +47,26 @@
     background: #b3261e;
     color: #fff;
   }
+  /* A small tile, like the board's. */
+  .tile {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    background: var(--correct);
+    box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.2);
+  }
+  .error .tile {
+    background: #fff;
+  }
   .text {
     flex: 1;
+  }
+  /* Phones: clear of the bar at the foot of the screen. */
+  @media (max-width: 720px) {
+    .toasts {
+      bottom: calc(72px + env(safe-area-inset-bottom));
+    }
   }
   .close {
     min-width: 44px;
@@ -58,8 +78,10 @@
     cursor: pointer;
     border-radius: 6px;
   }
+  /* The toast is dark on light pages (and light on dark ones): ring in the page colour. */
   .close:focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid currentColor;
+    outline-offset: -4px;
   }
   @keyframes in {
     from {

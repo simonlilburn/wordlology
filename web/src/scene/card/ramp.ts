@@ -2,6 +2,8 @@
 // paper to full ink (interpolated in OKLab, so lightness steps are even), and
 // WCAG contrast so labels on shaded rows flip colour to stay readable (AA).
 
+import { isDark } from '../../app/theme.svelte';
+
 export type RGB = [number, number, number]; // 0..255 sRGB
 
 export function hexToRgb(hex: string): RGB {
@@ -106,27 +108,27 @@ export function cardTheme(dark: boolean): CardTheme {
   return dark
     ? {
         dark,
-        paper: hexToRgb('#1d1d20'),
-        ink: hexToRgb('#ecebf2'),
+        paper: hexToRgb('#1b1e1a'),
+        ink: hexToRgb('#eef1ec'),
         labelDark: hexToRgb('#000000'),
         labelLight: hexToRgb('#ffffff'),
-        muted: hexToRgb('#a2a2aa'),
-        rule: hexToRgb('#3a3a40'),
-        ghost: hexToRgb('#8c8c96'),
-        accent: hexToRgb('#9d85ff'),
-        hatch: hexToRgb('#6a6a74'),
+        muted: hexToRgb('#a3ad9f'),
+        rule: hexToRgb('#3d443c'),
+        ghost: hexToRgb('#8f9a8c'),
+        accent: hexToRgb('#8cc985'),
+        hatch: hexToRgb('#6a7367'),
       }
     : {
         dark,
-        paper: hexToRgb('#fdfdfc'),
-        ink: hexToRgb('#17171a'),
+        paper: hexToRgb('#fdfdfb'),
+        ink: hexToRgb('#1b1f1a'),
         labelDark: hexToRgb('#000000'),
         labelLight: hexToRgb('#ffffff'),
-        muted: hexToRgb('#5f5f66'),
-        rule: hexToRgb('#dcdce0'),
-        ghost: hexToRgb('#7d7d88'),
-        accent: hexToRgb('#6a4cf0'),
-        hatch: hexToRgb('#9a9aa4'),
+        muted: hexToRgb('#5a6358'),
+        rule: hexToRgb('#d6dbd2'),
+        ghost: hexToRgb('#7a8577'),
+        accent: hexToRgb('#2f6b3a'),
+        hatch: hexToRgb('#99a296'),
       };
 }
 
@@ -150,17 +152,9 @@ export function rampPositions(shares: number[]): number[] {
   return shares.map((s) => (max > 0 ? Math.max(0, Math.min(1, s / max)) : 0));
 }
 
-let cachedDark: boolean | null = null;
-/** Whether the page prefers a dark scheme (cached; call `refreshScheme` on change). */
+/** Whether card faces use the dark theme (the Appearance setting, via app/theme). */
 export function prefersDark(): boolean {
-  if (cachedDark !== null) return cachedDark;
-  try {
-    cachedDark = typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches;
-  } catch {
-    cachedDark = false;
-  }
-  return cachedDark;
+  return isDark();
 }
-export function refreshScheme(): void {
-  cachedDark = null;
-}
+/** Kept for callers that reset on a scheme change; the scheme is no longer cached here. */
+export function refreshScheme(): void {}

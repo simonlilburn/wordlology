@@ -14,6 +14,12 @@ export const Z_MAX = 3;
 export const HYSTERESIS = 0.15;
 /** Spring stiffness (rad/s): a one-level move settles in about 1.2 s. */
 const OMEGA = 5.5;
+/**
+ * Stiffness between the Tree and Card levels, where the sampled trees stack
+ * up behind the current one: about 2.5 times slower, so the stack can be
+ * followed (95% of the way in about 2.2 s).
+ */
+export const OMEGA_STACK = 2.2;
 /** Reduced motion: full-level move time. */
 const REDUCED_MS = 200;
 
@@ -35,6 +41,12 @@ export function currentLevel(): Level {
   return Math.round(clamp(app.zTarget)) as Level;
 }
 
+/** Spring stiffness for a move from z toward target: slower while both lie between Tree (1) and Card (2). */
+export function stiffness(z: number, target: number): number {
+  const lo = Math.min(z, target), hi = Math.max(z, target);
+  return lo >= 1 - 1e-3 && hi <= 2 + 1e-3 ? OMEGA_STACK : OMEGA;
+}
+
 /** Advance the animation by dt ms. Exported for tests; the rAF loop calls it. Returns true while moving. */
 export function stepZoom(dtMs: number): boolean {
   if (app.zDragging) return false;
@@ -53,13 +65,14 @@ export function stepZoom(dtMs: number): boolean {
     return true;
   }
   // Critically damped spring: x'' = -w^2 (x - target) - 2 w x', integrated exactly over dt.
+  const w = stiffness(z, target);
   const x0 = z - target;
   const v0 = velocity;
-  const e = Math.exp(-OMEGA * dt);
+  const e = Math.exp(-w * dt);
   const a = x0;
-  const b = v0 + OMEGA * x0;
+  const b = v0 + w * x0;
   const x = (a + b * dt) * e;
-  velocity = (b - OMEGA * (a + b * dt)) * e;
+  velocity = (b - w * (a + b * dt)) * e;
   if (Math.abs(x) < 5e-4 && Math.abs(velocity) < 5e-3) {
     app.z = target;
     velocity = 0;

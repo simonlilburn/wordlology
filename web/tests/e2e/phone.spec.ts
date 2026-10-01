@@ -45,6 +45,11 @@ test('phone: game view and bottom sheet', async ({ page }) => {
     expect(box.bottom).toBeLessThanOrEqual(H);
     expect(box.height).toBeGreaterThanOrEqual(44);
   }
+  // The heading bar (wordmark and tools) sits at the foot of the screen, under the keyboard.
+  const settingsBtn = (await page.getByRole('region', { name: 'Game' }).getByRole('button', { name: 'Settings', exact: true }).boundingBox())!;
+  const lowestKey = Math.max(...(await keys.evaluateAll((els) => els.map((e) => e.getBoundingClientRect().bottom))));
+  expect(settingsBtn.y).toBeGreaterThanOrEqual(lowestKey);
+  expect(settingsBtn.y + settingsBtn.height).toBeLessThanOrEqual(H);
 
   // ---- Play by touch.
   await tapWord(page, OPENER);
@@ -89,7 +94,9 @@ test('phone: game view and bottom sheet', async ({ page }) => {
   await handle.tap();
   await expect(handle).toHaveAttribute('aria-label', 'Resize controls sheet (collapsed)');
   await expect(handle).toHaveAttribute('aria-expanded', 'false');
-  await expect.poll(height).toBeLessThan(100);
+  // Collapsed, the sheet keeps its handle and the bar with the wordmark and Settings.
+  await expect.poll(height).toBeLessThan(140);
+  await expect(sheet.getByRole('button', { name: 'Settings', exact: true })).toBeInViewport();
   await handle.tap();
   await expect(handle).toHaveAttribute('aria-label', 'Resize controls sheet (half)');
 

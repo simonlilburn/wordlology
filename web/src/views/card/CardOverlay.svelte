@@ -185,10 +185,13 @@
 {/if}
 
 {#if card}
+  <!-- A labelled scroll region: focusable so keyboard users can scroll it (WCAG 2.1.1). -->
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <section
     class="card-table"
     class:visually-hidden={!cardUi.table}
     aria-label="Card distribution table"
+    tabindex={cardUi.table ? 0 : undefined}
     style={cardUi.table ? `left:${sceneView.vp.left + 12}px;top:${sceneView.vp.top + 12}px` : ''}
   >
     {#if cardUi.table}
@@ -314,6 +317,14 @@
     line-height: 1;
     font-weight: 300;
   }
+  /* Hidden from view (still read by screen readers): clipped, not a scroll area. */
+  .card-table.visually-hidden {
+    overflow: hidden;
+  }
+  .card-table:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
   .card-table {
     position: fixed;
     z-index: 12;
@@ -323,7 +334,7 @@
     background: var(--bg);
     color: var(--fg);
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 12px 14px;
     box-shadow: 0 8px 30px rgb(0 0 0 / 0.18);
     font-size: 13px;
@@ -403,7 +414,7 @@
     background: var(--bg);
     color: var(--fg);
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     box-shadow: 0 10px 34px rgb(0 0 0 / 0.22);
     padding: 6px;
     display: flex;

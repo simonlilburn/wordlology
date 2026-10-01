@@ -385,7 +385,7 @@
     margin: 0;
     padding: 8px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     display: flex;
     flex-direction: column;
     gap: 8px;

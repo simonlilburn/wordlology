@@ -547,6 +547,7 @@ Every option below has a default, so the app works without anyone opening the pa
 | Game | Hard mode | off | on | result |
 | Game | Answer list | 2,500 most frequent words | 1,000 to 4,000 by frequency cutoff, or a pasted list | result |
 | Game | Zoom out after a game | on | stay on the board | display |
+| Game | Appearance | light | dark, match system | display |
 | Game | Colour palette | standard | high contrast | display |
 | Game | Colour-blind marks | on | off | display |
 | Computation | Arrival strategy | `info_proportional`, β = 1 | any preset or saved strategy | result |

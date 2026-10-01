@@ -19,7 +19,7 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     overflow: hidden;
   }
   button {

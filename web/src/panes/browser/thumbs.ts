@@ -1,11 +1,18 @@
 // Cover thumbnails for the target browser, drawn lazily with Canvas2D and cached.
 // A thumbnail shows the target tree's silhouette (rivers sized by games), its
-// most likely path as a straight trunk, and row shading for its outcome
-// distribution (rows Guess 1..max and X, darker = more games ending there).
+// most likely path as a straight trunk, and its outcome distribution as a
+// shaded strip down the right edge (rows Guess 1..max and X, darker = more
+// games ending there), leaving the tree itself on clear paper.
+import { MONO } from '../../app/fonts';
 import type { ThumbLayout } from './stats';
 
 export const THUMB_W = 96;
 export const THUMB_H = 128;
+/** Width of the shaded outcome strip at the right edge. */
+const STRIP_W = 12;
+/** The root (the lead-in above the opener) is drawn as a thin line, and rivers are capped, so the top of the tree stays light. */
+const ROOT_W = 1.4;
+const MAX_RIVER = 4.5;
 
 export interface ThumbColours {
   fg: string;
@@ -39,14 +46,14 @@ export function paintThumb(ctx: CanvasRenderingContext2D, layout: ThumbLayout, m
   const top = 6;
   const rowH = (h - top) / rows;
   const maxShare = Math.max(1e-9, ...layout.shares);
-  // Row shading and thin row rules.
+  // Outcome strip at the right edge and thin row rules.
   for (let r = 0; r < rows; r++) {
     const s = layout.shares[r] ?? 0;
     const y = top + r * rowH;
     if (s > 0) {
-      ctx.globalAlpha = 0.05 + 0.3 * (s / maxShare);
+      ctx.globalAlpha = 0.08 + 0.5 * (s / maxShare);
       ctx.fillStyle = r === maxGuesses ? '#c0392b' : c.fg;
-      ctx.fillRect(0, y, w, rowH);
+      ctx.fillRect(w - STRIP_W, y, STRIP_W, rowH);
     }
     ctx.globalAlpha = 0.25;
     ctx.fillStyle = c.muted;
@@ -55,14 +62,15 @@ export function paintThumb(ctx: CanvasRenderingContext2D, layout: ThumbLayout, m
   }
   if (!layout.games) {
     ctx.fillStyle = c.muted;
-    ctx.font = '10px system-ui, sans-serif';
+    ctx.font = `9px ${MONO}`;
     ctx.textAlign = 'center';
     ctx.fillText('computing…', w / 2, h / 2);
     return;
   }
   const yOf = (d: number) => (d <= 0 ? top : top + (d - 0.5) * rowH);
-  const xOf = (x: number) => 4 + Math.min(1, Math.max(0, x)) * (w - 8);
-  const maxRiver = w * 0.16;
+  // The tree keeps clear of the strip.
+  const xOf = (x: number) => 4 + Math.min(1, Math.max(0, x)) * (w - 10 - STRIP_W);
+  const maxRiver = w * 0.08;
   const drawEdges = (trunk: boolean) => {
     for (const e of layout.edges) {
       if (e.trunk !== trunk) continue;
@@ -70,7 +78,7 @@ export function paintThumb(ctx: CanvasRenderingContext2D, layout: ThumbLayout, m
       const x1 = xOf(e.x1);
       const y0 = yOf(e.d0);
       const y1 = yOf(e.d1);
-      ctx.lineWidth = Math.max(0.75, e.share * maxRiver);
+      ctx.lineWidth = e.d0 <= 0 ? ROOT_W : Math.max(0.75, Math.min(MAX_RIVER, e.share * maxRiver));
       ctx.strokeStyle = c.fg;
       ctx.globalAlpha = trunk ? 1 : 0.45;
       ctx.beginPath();
