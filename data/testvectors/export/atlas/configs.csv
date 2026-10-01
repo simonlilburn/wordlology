@@ -1,0 +1,3 @@
+config_id,strategy_id,strategy_label,strategy_json,opener,word_list_id,word_list_version,hard_mode,max_guesses,replicates,base_seed,filter,solver_version,app_version,exported_at,complete,targets_finished,answers,weighting
+af49e7502a35bc9e,max_info,Max information,"{""kind"":""max_info"",""pool"":""candidates""}",slate,ref-en-5,1.0.0,FALSE,6,1,1,NA,0.1.0,testvectors,2026-09-30T15:33:00Z,TRUE,300,default,equal
+132aa67b02fbfd82,info_proportional,Info-proportional (β = 1),"{""beta"":1.0,""kind"":""info_proportional"",""pool"":""candidates""}",slate,ref-en-5,1.0.0,FALSE,6,2,1,NA,0.1.0,testvectors,2026-09-30T15:33:00Z,FALSE,3,default,equal

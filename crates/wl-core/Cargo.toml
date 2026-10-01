@@ -1,0 +1,20 @@
+[package]
+name = "wl-core"
+description = "Word lists, feedback patterns, the pattern matrix, candidate bitsets, partitions, entropy and letter filters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+libm = "0.2"
+
+[dev-dependencies]
+proptest = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "core"
+harness = false

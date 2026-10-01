@@ -1,0 +1,69 @@
+# Static hosting for the built web app (web/dist, copied to /srv by the Dockerfile).
+#
+# - COOP and COEP make the page cross-origin isolated, so the solver workers
+#   may share memory (docs/specification.md, "Frontend, design and accessibility").
+# - Hashed build output (/assets/*) is cached for a year; everything else
+#   (index.html, word lists, precomputed results) is revalidated on each use
+#   through its ETag, so a deploy is picked up at once.
+# - Text, JavaScript, JSON, WASM and game batches are compressed on the fly.
+# - TLS ends at the fly.io proxy, so Caddy listens on plain HTTP.
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+:{$PORT:8080} {
+	root * /srv
+
+	header {
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Embedder-Policy "require-corp"
+		Cross-Origin-Resource-Policy "same-origin"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	@hashed path /assets/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+
+	@unhashed not path /assets/*
+	header @unhashed Cache-Control "no-cache"
+
+	@wasm path *.wasm
+	header @wasm Content-Type "application/wasm"
+
+	@wlgb path *.wlgb
+	header @wlgb Content-Type "application/octet-stream"
+
+	@tsv path *.tsv
+	header @tsv Content-Type "text/tab-separated-values; charset=utf-8"
+
+	@txt path *.txt
+	header @txt Content-Type "text/plain; charset=utf-8"
+
+	# Compressed on the fly (zstd for browsers that take it, else gzip), including
+	# the binary game batches of precomputed results. Precompressed sidecar
+	# files are avoided: Caddy 2.10 answers them with 206 Partial Content.
+	encode {
+		zstd
+		gzip
+		minimum_length 512
+		match {
+			header Content-Type text/*
+			header Content-Type application/javascript*
+			header Content-Type application/json*
+			header Content-Type application/wasm*
+			header Content-Type application/octet-stream*
+			header Content-Type image/svg+xml*
+		}
+	}
+
+	file_server
+
+	log {
+		output stdout
+		format console
+	}
+}

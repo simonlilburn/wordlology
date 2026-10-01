@@ -1,0 +1,111 @@
+{
+  "config": {
+    "base_seed": 1,
+    "opener": "slate",
+    "replicates": 5,
+    "rules": {
+      "hard_mode": false,
+      "max_guesses": 6
+    },
+    "strategy": {
+      "kind": "mixture",
+      "strategies": [
+        {
+          "kind": "max_info",
+          "pool": "candidates"
+        },
+        {
+          "kind": "random",
+          "pool": "candidates"
+        }
+      ],
+      "weights": [
+        0.9,
+        0.1
+      ]
+    },
+    "weighting": "equal",
+    "word_list": {
+      "answers": {
+        "kind": "default"
+      },
+      "id": "ref-en-5",
+      "version": "1.0.0"
+    }
+  },
+  "config_id": "db93058ffffcb995",
+  "counts": [
+    0,
+    370,
+    1009,
+    109,
+    12,
+    0,
+    0
+  ],
+  "first_games": [
+    {
+      "path": "slate>cover>ended",
+      "replicate": 0,
+      "solved": true,
+      "target": "ended"
+    },
+    {
+      "path": "slate>cross",
+      "replicate": 0,
+      "solved": true,
+      "target": "cross"
+    },
+    {
+      "path": "slate>every>order>upper",
+      "replicate": 0,
+      "solved": true,
+      "target": "upper"
+    },
+    {
+      "path": "slate>lived>lower",
+      "replicate": 0,
+      "solved": true,
+      "target": "lower"
+    },
+    {
+      "path": "slate>shall>small",
+      "replicate": 0,
+      "solved": true,
+      "target": "small"
+    },
+    {
+      "path": "slate>stone>store",
+      "replicate": 0,
+      "solved": true,
+      "target": "store"
+    },
+    {
+      "path": "slate>round>young",
+      "replicate": 0,
+      "solved": true,
+      "target": "young"
+    },
+    {
+      "path": "slate>count>joint",
+      "replicate": 0,
+      "solved": true,
+      "target": "joint"
+    }
+  ],
+  "games_blake3": "e3152679fd88bd46ddee647c709f2a262cff97a0295c5aee507a16e5d528ba94",
+  "mean_guesses": "2.842",
+  "n_games": 1500,
+  "preset": "epsilon_greedy",
+  "se_mean": "0.00533333",
+  "shares": [
+    "0",
+    "0.246667",
+    "0.672667",
+    "0.0726667",
+    "0.008",
+    "0",
+    "0"
+  ],
+  "solver_version": "0.1.0"
+}

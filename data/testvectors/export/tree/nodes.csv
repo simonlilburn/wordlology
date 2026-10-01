@@ -1,0 +1,10 @@
+node_id,parent_id,config_id,target,depth,guess,feedback,n_games,share,is_terminal,outcome,matches_filter
+132aa67b02fbfd82-began-n0,NA,132aa67b02fbfd82,began,0,NA,NA,2,1,FALSE,NA,NA
+132aa67b02fbfd82-began-n1,132aa67b02fbfd82-began-n0,132aa67b02fbfd82,began,1,slate,bbyby,2,1,FALSE,NA,NA
+132aa67b02fbfd82-began-n2,132aa67b02fbfd82-began-n1,132aa67b02fbfd82,began,2,media,bgbby,1,0.5,FALSE,NA,NA
+132aa67b02fbfd82-began-n3,132aa67b02fbfd82-began-n2,132aa67b02fbfd82,began,3,began,ggggg,1,0.5,TRUE,3,NA
+132aa67b02fbfd82-began-n4,132aa67b02fbfd82-began-n1,132aa67b02fbfd82,began,2,break,gbygb,1,0.5,FALSE,NA,NA
+132aa67b02fbfd82-began-n5,132aa67b02fbfd82-began-n4,132aa67b02fbfd82,began,3,began,ggggg,1,0.5,TRUE,3,NA
+132aa67b02fbfd82-began-n6,132aa67b02fbfd82-began-n1,132aa67b02fbfd82,began,2,crane,bbyyy,0,0,FALSE,NA,NA
+132aa67b02fbfd82-began-n7,132aa67b02fbfd82-began-n6,132aa67b02fbfd82,began,3,doubt,bbbyb,0,0,FALSE,NA,NA
+132aa67b02fbfd82-began-n8,132aa67b02fbfd82-began-n7,132aa67b02fbfd82,began,4,began,ggggg,0,0,TRUE,4,NA
