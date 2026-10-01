@@ -1,0 +1,105 @@
+{
+  "config": {
+    "base_seed": 1,
+    "opener": "slate",
+    "replicates": 1,
+    "rules": {
+      "hard_mode": false,
+      "max_guesses": 6
+    },
+    "strategy": {
+      "kind": "coverage_then",
+      "switch": {
+        "k": 2,
+        "when": "after_turns"
+      },
+      "then": {
+        "kind": "max_info",
+        "pool": "candidates"
+      }
+    },
+    "weighting": "equal",
+    "word_list": {
+      "answers": {
+        "kind": "default"
+      },
+      "id": "ref-en-5",
+      "version": "1.0.0"
+    }
+  },
+  "config_id": "e0402907a4fedf97",
+  "counts": [
+    0,
+    33,
+    241,
+    25,
+    1,
+    0,
+    0
+  ],
+  "first_games": [
+    {
+      "path": "slate>round",
+      "replicate": 0,
+      "solved": true,
+      "target": "round"
+    },
+    {
+      "path": "slate>focus",
+      "replicate": 0,
+      "solved": true,
+      "target": "focus"
+    },
+    {
+      "path": "slate>could",
+      "replicate": 0,
+      "solved": true,
+      "target": "could"
+    },
+    {
+      "path": "slate>solid",
+      "replicate": 0,
+      "solved": true,
+      "target": "solid"
+    },
+    {
+      "path": "slate>basic",
+      "replicate": 0,
+      "solved": true,
+      "target": "basic"
+    },
+    {
+      "path": "slate>still",
+      "replicate": 0,
+      "solved": true,
+      "target": "still"
+    },
+    {
+      "path": "slate>coast",
+      "replicate": 0,
+      "solved": true,
+      "target": "coast"
+    },
+    {
+      "path": "slate>plant",
+      "replicate": 0,
+      "solved": true,
+      "target": "plant"
+    }
+  ],
+  "games_blake3": "88b0bde41a03fbd498f7715f1a70cb3e9b4d8e849d71d33e46faed9cb7224d0d",
+  "mean_guesses": "2.98",
+  "n_games": 300,
+  "preset": "coverage_then",
+  "se_mean": null,
+  "shares": [
+    "0",
+    "0.11",
+    "0.803333",
+    "0.0833333",
+    "0.00333333",
+    "0",
+    "0"
+  ],
+  "solver_version": "0.1.0"
+}

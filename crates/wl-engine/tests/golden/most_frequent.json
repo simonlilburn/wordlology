@@ -1,0 +1,97 @@
+{
+  "config": {
+    "base_seed": 1,
+    "opener": "slate",
+    "replicates": 1,
+    "rules": {
+      "hard_mode": false,
+      "max_guesses": 6
+    },
+    "strategy": {
+      "kind": "most_frequent"
+    },
+    "weighting": "equal",
+    "word_list": {
+      "answers": {
+        "kind": "default"
+      },
+      "id": "ref-en-5",
+      "version": "1.0.0"
+    }
+  },
+  "config_id": "278806a380b10822",
+  "counts": [
+    0,
+    77,
+    157,
+    58,
+    7,
+    1,
+    0
+  ],
+  "first_games": [
+    {
+      "path": "slate>which",
+      "replicate": 0,
+      "solved": true,
+      "target": "which"
+    },
+    {
+      "path": "slate>music",
+      "replicate": 0,
+      "solved": true,
+      "target": "music"
+    },
+    {
+      "path": "slate>sorry",
+      "replicate": 0,
+      "solved": true,
+      "target": "sorry"
+    },
+    {
+      "path": "slate>would",
+      "replicate": 0,
+      "solved": true,
+      "target": "would"
+    },
+    {
+      "path": "slate>solid",
+      "replicate": 0,
+      "solved": true,
+      "target": "solid"
+    },
+    {
+      "path": "slate>blood",
+      "replicate": 0,
+      "solved": true,
+      "target": "blood"
+    },
+    {
+      "path": "slate>happy",
+      "replicate": 0,
+      "solved": true,
+      "target": "happy"
+    },
+    {
+      "path": "slate>basic",
+      "replicate": 0,
+      "solved": true,
+      "target": "basic"
+    }
+  ],
+  "games_blake3": "2bfc0354a4c1c817efcc5c9d58458f70126be037e1b9758597ffbb4d44e88624",
+  "mean_guesses": "2.99333",
+  "n_games": 300,
+  "preset": "most_frequent",
+  "se_mean": null,
+  "shares": [
+    "0",
+    "0.256667",
+    "0.523333",
+    "0.193333",
+    "0.0233333",
+    "0.00333333",
+    "0"
+  ],
+  "solver_version": "0.1.0"
+}

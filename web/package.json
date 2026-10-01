@@ -1,0 +1,32 @@
+{
+  "name": "wordlology-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "sync-data": "node scripts/sync-data.mjs",
+    "wasm": "wasm-pack build ../crates/wl-wasm --release --target web --out-dir ../../web/src/wasm/pkg --out-name wl_wasm",
+    "dev": "npm run sync-data && vite",
+    "build": "npm run sync-data && vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest run",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "three": "^0.186.1",
+    "troika-three-text": "^0.52.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@types/three": "^0.186.0",
+    "jsdom": "^30.1.1",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.3"
+  }
+}

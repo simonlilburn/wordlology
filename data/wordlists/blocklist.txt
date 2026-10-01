@@ -1,0 +1,13 @@
+# Words never used as answers, whatever the review says: slurs and the most
+# explicit vulgarities. One lowercase word per line. The LLM review
+# (answers-excluded.tsv) catches milder cases.
+bitch
+dyked
+dykey
+faggy
+fagot
+kikes
+pussy
+spick
+twats
+whore

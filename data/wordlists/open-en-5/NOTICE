@@ -1,0 +1,29 @@
+wordlology word lists
+=====================
+
+guesses.txt
+  Every five-letter word of the ENABLE word list (Enhanced North American
+  Benchmark LExicon), released into the public domain. The ENABLE authors ask
+  to be credited: ENABLE was compiled by Alan Beale and M. Cooper, with
+  contributions from many word-game players.
+  http://wiki.puzzlers.org/dokuwiki/doku.php?id=solving:wordlists:about:enable_readme
+
+frequencies.tsv, answers.txt, answers-ranked.txt
+  Derived from wordfreq 3.1.1 by Robyn Speer (Luminoso), whose
+  data is licensed under the Creative Commons Attribution-ShareAlike 4.0
+  licence (CC BY-SA 4.0): https://creativecommons.org/licenses/by-sa/4.0/
+  These files are shared under the same licence.
+
+  wordfreq's English data includes data from SUBTLEX, whose authors ask to be
+  credited:
+    Marc Brysbaert, Emmanuel Keuleers, Boris New and colleagues, the SUBTLEX
+    word frequency lists (SUBTLEX-US, SUBTLEX-UK and related corpora).
+  and from other sources credited in wordfreq's README:
+    https://github.com/rspeer/wordfreq#citations
+  wordfreq's author asks that its data never be separated from this
+  attribution. wordfreq's data is a snapshot through about 2021 and will not
+  be updated.
+
+  The answer list is the 2500 most frequent guesses, less simple -s
+  plurals of four-letter ENABLE words, a blocklist, and words flagged by an
+  LLM review recorded in answers-excluded.tsv.

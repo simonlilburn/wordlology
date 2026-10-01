@@ -1,0 +1,12 @@
+/target
+/target-*
+**/node_modules
+/web/dist
+/web/src/wasm/pkg
+/web/public/wordlists
+/web/test-results
+/web/playwright-report
+/data/wordlists/.cache
+__pycache__/
+*.pyc
+.DS_Store

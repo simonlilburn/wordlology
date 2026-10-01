@@ -1,0 +1,24 @@
+# Keep the build context to what the Dockerfile copies: Cargo files, crates/,
+# data/wordlists, precomputed/, web/ and deploy/.
+.git
+.github
+**/node_modules
+**/.DS_Store
+**/__pycache__
+**/*.pyc
+target
+target-*
+docs
+scripts
+data/testvectors
+data/wordlists/.cache
+web/dist
+web/src/wasm/pkg
+web/public/wordlists
+web/public/precomputed
+web/test-results
+web/playwright-report
+web/tests
+fly.toml
+Dockerfile
+.dockerignore

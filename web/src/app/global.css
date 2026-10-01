@@ -1,0 +1,50 @@
+/* Global tokens. Tile colours follow the familiar palette; .high-contrast swaps to orange and blue. */
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1a1a1b;
+  --muted: #6b6b70;
+  --line: #d3d6da;
+  --panel: #f7f7f8;
+  --accent: #7c5cff;
+  --correct: #6aaa64;
+  --present: #c9b458;
+  --absent: #787c7e;
+  --tile-text: #ffffff;
+  --key-bg: #d3d6da;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121213;
+    --fg: #f2f2f3;
+    --muted: #9a9aa0;
+    --line: #3a3a3c;
+    --panel: #1c1c1f;
+    --correct: #538d4e;
+    --present: #b59f3b;
+    --absent: #3a3a3c;
+    --key-bg: #818384;
+  }
+}
+.high-contrast {
+  --correct: #f5793a;
+  --present: #85c0f9;
+}
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; }
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0);
+  white-space: nowrap; border: 0;
+}

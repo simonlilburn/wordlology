@@ -1,0 +1,108 @@
+{
+  "config": {
+    "base_seed": 1,
+    "opener": "slate",
+    "replicates": 1,
+    "rules": {
+      "hard_mode": false,
+      "max_guesses": 6
+    },
+    "strategy": {
+      "kind": "sequence_then",
+      "switch": {
+        "when": "sequence_exhausted"
+      },
+      "then": {
+        "kind": "max_info",
+        "pool": "candidates"
+      },
+      "words": [
+        "saint",
+        "older"
+      ]
+    },
+    "weighting": "equal",
+    "word_list": {
+      "answers": {
+        "kind": "default"
+      },
+      "id": "ref-en-5",
+      "version": "1.0.0"
+    }
+  },
+  "config_id": "46c3c94b52efebd4",
+  "counts": [
+    0,
+    24,
+    182,
+    91,
+    3,
+    0,
+    0
+  ],
+  "first_games": [
+    {
+      "path": "slate>solid",
+      "replicate": 0,
+      "solved": true,
+      "target": "solid"
+    },
+    {
+      "path": "slate>still",
+      "replicate": 0,
+      "solved": true,
+      "target": "still"
+    },
+    {
+      "path": "slate>coast",
+      "replicate": 0,
+      "solved": true,
+      "target": "coast"
+    },
+    {
+      "path": "slate>plant",
+      "replicate": 0,
+      "solved": true,
+      "target": "plant"
+    },
+    {
+      "path": "slate>south",
+      "replicate": 0,
+      "solved": true,
+      "target": "south"
+    },
+    {
+      "path": "slate>older",
+      "replicate": 0,
+      "solved": true,
+      "target": "older"
+    },
+    {
+      "path": "slate>sleep",
+      "replicate": 0,
+      "solved": true,
+      "target": "sleep"
+    },
+    {
+      "path": "slate>speak",
+      "replicate": 0,
+      "solved": true,
+      "target": "speak"
+    }
+  ],
+  "games_blake3": "1ef953ab073a41133df6560c600a66b9ebce70d42f3a6c64ceee91e9e8f17d65",
+  "mean_guesses": "3.24333",
+  "n_games": 300,
+  "preset": "sequence_then",
+  "se_mean": null,
+  "shares": [
+    "0",
+    "0.08",
+    "0.606667",
+    "0.303333",
+    "0.01",
+    "0",
+    "0"
+  ],
+  "solver_version": "0.1.0"
+}

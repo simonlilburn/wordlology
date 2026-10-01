@@ -1,0 +1,27 @@
+{
+  "id": "ref-en-5",
+  "name": "Reference (frozen, for golden tests)",
+  "version": "1.0.0",
+  "word_length": 5,
+  "language": "en",
+  "answers": "answers.txt",
+  "guesses": "guesses.txt",
+  "frequencies": "frequencies.tsv",
+  "notice": "NOTICE",
+  "licence": "guesses: ENABLE word list (public domain). answers and frequencies: derived from wordfreq (CC BY-SA 4.0), including data from SUBTLEX; see NOTICE.",
+  "credits": [
+    "ENABLE word list (public domain), compiled by Alan Beale and M. Cooper",
+    "wordfreq 3.1.1 by Robyn Speer, CC BY-SA 4.0",
+    "SUBTLEX word frequencies by Marc Brysbaert, Emmanuel Keuleers, Boris New and colleagues"
+  ],
+  "counts": {
+    "guesses": 1500,
+    "answers": 300
+  },
+  "sha256": {
+    "guesses.txt": "ca80bfb818d794dacb293ce90d2ca002d62b79996d98c7f1afa653c559166f74",
+    "answers.txt": "67158ffcfd40b4dbb0d3368023b500453854837391e8759b4644c1d43307c001",
+    "frequencies.tsv": "75bc8079b05f36a81c77e08cb864875d5969615fb87de960bd4b2e9489ab197f",
+    "NOTICE": "847437b9784447159e0ce24d144f60d711d4aa7b1c133628548001f32dc989fa"
+  }
+}

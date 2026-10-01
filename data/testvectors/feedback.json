@@ -1,0 +1,1913 @@
+{
+ "description": "Feedback test vectors: code = sum c_i 3^i (0 absent, 1 present, 2 correct); letters spell g/y/b. Shared by Rust and TypeScript tests.",
+ "cases": [
+  {
+   "guess": "speed",
+   "target": "abide",
+   "code": 90,
+   "letters": "bbyby"
+  },
+  {
+   "guess": "speed",
+   "target": "erase",
+   "code": 37,
+   "letters": "ybyyb"
+  },
+  {
+   "guess": "speed",
+   "target": "steal",
+   "code": 20,
+   "letters": "gbgbb"
+  },
+  {
+   "guess": "speed",
+   "target": "crepe",
+   "code": 48,
+   "letters": "bygyb"
+  },
+  {
+   "guess": "abbey",
+   "target": "kebab",
+   "code": 49,
+   "letters": "yygyb"
+  },
+  {
+   "guess": "abbey",
+   "target": "babes",
+   "code": 76,
+   "letters": "yyggb"
+  },
+  {
+   "guess": "lolly",
+   "target": "level",
+   "code": 11,
+   "letters": "gbybb"
+  },
+  {
+   "guess": "allee",
+   "target": "eagle",
+   "code": 193,
+   "letters": "yybyg"
+  },
+  {
+   "guess": "geese",
+   "target": "those",
+   "code": 216,
+   "letters": "bbbgg"
+  },
+  {
+   "guess": "eerie",
+   "target": "there",
+   "code": 172,
+   "letters": "ybybg"
+  },
+  {
+   "guess": "sassy",
+   "target": "brass",
+   "code": 58,
+   "letters": "yybgb"
+  },
+  {
+   "guess": "mamma",
+   "target": "maxim",
+   "code": 17,
+   "letters": "ggybb"
+  },
+  {
+   "guess": "crane",
+   "target": "crane",
+   "code": 242,
+   "letters": "ggggg"
+  },
+  {
+   "guess": "swims",
+   "target": "tulle",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "ribby",
+   "target": "yills",
+   "code": 87,
+   "letters": "bgbby"
+  },
+  {
+   "guess": "arils",
+   "target": "joint",
+   "code": 18,
+   "letters": "bbgbb"
+  },
+  {
+   "guess": "sniff",
+   "target": "bandy",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "boots",
+   "target": "taxed",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "memos",
+   "target": "beers",
+   "code": 168,
+   "letters": "bgbbg"
+  },
+  {
+   "guess": "sheol",
+   "target": "genii",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "welly",
+   "target": "stood",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "crook",
+   "target": "taunt",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "lupin",
+   "target": "shris",
+   "code": 54,
+   "letters": "bbbgb"
+  },
+  {
+   "guess": "hexer",
+   "target": "evoke",
+   "code": 30,
+   "letters": "bybyb"
+  },
+  {
+   "guess": "scrub",
+   "target": "upper",
+   "code": 36,
+   "letters": "bbyyb"
+  },
+  {
+   "guess": "haafs",
+   "target": "scams",
+   "code": 180,
+   "letters": "bbgbg"
+  },
+  {
+   "guess": "elope",
+   "target": "humid",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "edges",
+   "target": "owner",
+   "code": 54,
+   "letters": "bbbgb"
+  },
+  {
+   "guess": "leafs",
+   "target": "shire",
+   "code": 84,
+   "letters": "bybby"
+  },
+  {
+   "guess": "ovens",
+   "target": "beech",
+   "code": 18,
+   "letters": "bbgbb"
+  },
+  {
+   "guess": "mutes",
+   "target": "carve",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "modes",
+   "target": "irate",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "skids",
+   "target": "apeak",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "hence",
+   "target": "mocha",
+   "code": 28,
+   "letters": "ybbyb"
+  },
+  {
+   "guess": "assai",
+   "target": "ruers",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "claim",
+   "target": "phony",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "cosec",
+   "target": "kusso",
+   "code": 21,
+   "letters": "bygbb"
+  },
+  {
+   "guess": "bonks",
+   "target": "surer",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "mamie",
+   "target": "anion",
+   "code": 30,
+   "letters": "bybyb"
+  },
+  {
+   "guess": "limey",
+   "target": "skate",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "doted",
+   "target": "tacit",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "cetes",
+   "target": "coala",
+   "code": 2,
+   "letters": "gbbbb"
+  },
+  {
+   "guess": "yauds",
+   "target": "snubs",
+   "code": 180,
+   "letters": "bbgbg"
+  },
+  {
+   "guess": "corgi",
+   "target": "ender",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "basks",
+   "target": "mossy",
+   "code": 99,
+   "letters": "bbgby"
+  },
+  {
+   "guess": "cions",
+   "target": "audit",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "kurus",
+   "target": "nodal",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "buyer",
+   "target": "agria",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "batty",
+   "target": "dowed",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "nooky",
+   "target": "zooks",
+   "code": 78,
+   "letters": "bgggb"
+  },
+  {
+   "guess": "kakis",
+   "target": "rouse",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "kempt",
+   "target": "sever",
+   "code": 6,
+   "letters": "bgbbb"
+  },
+  {
+   "guess": "zoner",
+   "target": "rigor",
+   "code": 165,
+   "letters": "bybbg"
+  },
+  {
+   "guess": "skull",
+   "target": "dacha",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "dives",
+   "target": "belly",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "rasps",
+   "target": "noisy",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "scall",
+   "target": "ether",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "sneer",
+   "target": "nobby",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "ossia",
+   "target": "opera",
+   "code": 164,
+   "letters": "gbbbg"
+  },
+  {
+   "guess": "sails",
+   "target": "verso",
+   "code": 1,
+   "letters": "ybbbb"
+  },
+  {
+   "guess": "brown",
+   "target": "yeast",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "primi",
+   "target": "dived",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "yeuky",
+   "target": "curly",
+   "code": 171,
+   "letters": "bbybg"
+  },
+  {
+   "guess": "river",
+   "target": "riper",
+   "code": 224,
+   "letters": "ggbgg"
+  },
+  {
+   "guess": "sutta",
+   "target": "watts",
+   "code": 154,
+   "letters": "ybggy"
+  },
+  {
+   "guess": "macon",
+   "target": "color",
+   "code": 63,
+   "letters": "bbygb"
+  },
+  {
+   "guess": "wawls",
+   "target": "relic",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "leben",
+   "target": "rider",
+   "code": 54,
+   "letters": "bbbgb"
+  },
+  {
+   "guess": "dweeb",
+   "target": "nided",
+   "code": 55,
+   "letters": "ybbgb"
+  },
+  {
+   "guess": "leper",
+   "target": "vegan",
+   "code": 6,
+   "letters": "bgbbb"
+  },
+  {
+   "guess": "woosh",
+   "target": "femme",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "yecch",
+   "target": "codec",
+   "code": 39,
+   "letters": "byyyb"
+  },
+  {
+   "guess": "niece",
+   "target": "aldol",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "ovens",
+   "target": "valve",
+   "code": 12,
+   "letters": "byybb"
+  },
+  {
+   "guess": "wyles",
+   "target": "potty",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "punto",
+   "target": "chick",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "henna",
+   "target": "tenth",
+   "code": 25,
+   "letters": "yggbb"
+  },
+  {
+   "guess": "evens",
+   "target": "radar",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "jesse",
+   "target": "nooky",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "swigs",
+   "target": "court",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "zooms",
+   "target": "needy",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "solon",
+   "target": "hiked",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "uplit",
+   "target": "exile",
+   "code": 36,
+   "letters": "bbyyb"
+  },
+  {
+   "guess": "aioli",
+   "target": "raise",
+   "code": 4,
+   "letters": "yybbb"
+  },
+  {
+   "guess": "kheth",
+   "target": "sniff",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "trier",
+   "target": "scent",
+   "code": 28,
+   "letters": "ybbyb"
+  },
+  {
+   "guess": "gonad",
+   "target": "woken",
+   "code": 15,
+   "letters": "bgybb"
+  },
+  {
+   "guess": "steel",
+   "target": "enact",
+   "code": 12,
+   "letters": "byybb"
+  },
+  {
+   "guess": "credo",
+   "target": "maims",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "hutch",
+   "target": "boson",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "kiddo",
+   "target": "cooky",
+   "code": 82,
+   "letters": "ybbby"
+  },
+  {
+   "guess": "adage",
+   "target": "vanda",
+   "code": 13,
+   "letters": "yyybb"
+  },
+  {
+   "guess": "nomen",
+   "target": "trunk",
+   "code": 1,
+   "letters": "ybbbb"
+  },
+  {
+   "guess": "belle",
+   "target": "cecal",
+   "code": 15,
+   "letters": "bgybb"
+  },
+  {
+   "guess": "pavan",
+   "target": "clove",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "bunks",
+   "target": "goops",
+   "code": 162,
+   "letters": "bbbbg"
+  },
+  {
+   "guess": "cornu",
+   "target": "repel",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "caver",
+   "target": "edged",
+   "code": 54,
+   "letters": "bbbgb"
+  },
+  {
+   "guess": "blabs",
+   "target": "sexes",
+   "code": 162,
+   "letters": "bbbbg"
+  },
+  {
+   "guess": "taroc",
+   "target": "vomit",
+   "code": 28,
+   "letters": "ybbyb"
+  },
+  {
+   "guess": "tramp",
+   "target": "betta",
+   "code": 10,
+   "letters": "ybybb"
+  },
+  {
+   "guess": "creme",
+   "target": "swash",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "pedro",
+   "target": "sheet",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "reive",
+   "target": "amiga",
+   "code": 18,
+   "letters": "bbgbb"
+  },
+  {
+   "guess": "theta",
+   "target": "crore",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "goody",
+   "target": "syncs",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "click",
+   "target": "khaph",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "suits",
+   "target": "juicy",
+   "code": 24,
+   "letters": "bggbb"
+  },
+  {
+   "guess": "bumfs",
+   "target": "brava",
+   "code": 2,
+   "letters": "gbbbb"
+  },
+  {
+   "guess": "vowel",
+   "target": "dexie",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "swabs",
+   "target": "dryer",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "cameo",
+   "target": "sudds",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "unman",
+   "target": "rival",
+   "code": 54,
+   "letters": "bbbgb"
+  },
+  {
+   "guess": "wryer",
+   "target": "union",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "bleep",
+   "target": "woops",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "sords",
+   "target": "clash",
+   "code": 1,
+   "letters": "ybbbb"
+  },
+  {
+   "guess": "sages",
+   "target": "obese",
+   "code": 28,
+   "letters": "ybbyb"
+  },
+  {
+   "guess": "cairn",
+   "target": "lavas",
+   "code": 6,
+   "letters": "bgbbb"
+  },
+  {
+   "guess": "datto",
+   "target": "vuggy",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "malms",
+   "target": "skits",
+   "code": 162,
+   "letters": "bbbbg"
+  },
+  {
+   "guess": "rogue",
+   "target": "sieve",
+   "code": 162,
+   "letters": "bbbbg"
+  },
+  {
+   "guess": "emeus",
+   "target": "elect",
+   "code": 20,
+   "letters": "gbgbb"
+  },
+  {
+   "guess": "acock",
+   "target": "hooty",
+   "code": 18,
+   "letters": "bbgbb"
+  },
+  {
+   "guess": "woosh",
+   "target": "noose",
+   "code": 78,
+   "letters": "bgggb"
+  },
+  {
+   "guess": "slews",
+   "target": "shoos",
+   "code": 164,
+   "letters": "gbbbg"
+  },
+  {
+   "guess": "mondo",
+   "target": "peers",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "whump",
+   "target": "gizmo",
+   "code": 54,
+   "letters": "bbbgb"
+  },
+  {
+   "guess": "tauts",
+   "target": "blubs",
+   "code": 180,
+   "letters": "bbgbg"
+  },
+  {
+   "guess": "stoop",
+   "target": "fugue",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "nulls",
+   "target": "sulks",
+   "code": 186,
+   "letters": "bggbg"
+  },
+  {
+   "guess": "dived",
+   "target": "swamp",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "hamal",
+   "target": "viral",
+   "code": 216,
+   "letters": "bbbgg"
+  },
+  {
+   "guess": "socks",
+   "target": "crude",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "llano",
+   "target": "quote",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "basso",
+   "target": "tippy",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "elect",
+   "target": "gadid",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "lobos",
+   "target": "hammy",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "nisus",
+   "target": "deads",
+   "code": 162,
+   "letters": "bbbbg"
+  },
+  {
+   "guess": "tabun",
+   "target": "labia",
+   "code": 24,
+   "letters": "bggbb"
+  },
+  {
+   "guess": "numen",
+   "target": "micro",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "fauna",
+   "target": "query",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "ragee",
+   "target": "relic",
+   "code": 29,
+   "letters": "gbbyb"
+  },
+  {
+   "guess": "jerry",
+   "target": "charm",
+   "code": 54,
+   "letters": "bbbgb"
+  },
+  {
+   "guess": "genet",
+   "target": "levee",
+   "code": 60,
+   "letters": "bgbgb"
+  },
+  {
+   "guess": "gemma",
+   "target": "pryer",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "moggy",
+   "target": "board",
+   "code": 6,
+   "letters": "bgbbb"
+  },
+  {
+   "guess": "fling",
+   "target": "selfs",
+   "code": 4,
+   "letters": "yybbb"
+  },
+  {
+   "guess": "wears",
+   "target": "loons",
+   "code": 162,
+   "letters": "bbbbg"
+  },
+  {
+   "guess": "dewax",
+   "target": "widow",
+   "code": 10,
+   "letters": "ybybb"
+  },
+  {
+   "guess": "sally",
+   "target": "faded",
+   "code": 6,
+   "letters": "bgbbb"
+  },
+  {
+   "guess": "naiad",
+   "target": "bowel",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "ricer",
+   "target": "treat",
+   "code": 28,
+   "letters": "ybbyb"
+  },
+  {
+   "guess": "pilaw",
+   "target": "ethos",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "ended",
+   "target": "inane",
+   "code": 7,
+   "letters": "ygbbb"
+  },
+  {
+   "guess": "bloop",
+   "target": "sires",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "feeze",
+   "target": "civie",
+   "code": 162,
+   "letters": "bbbbg"
+  },
+  {
+   "guess": "terra",
+   "target": "quiet",
+   "code": 4,
+   "letters": "yybbb"
+  },
+  {
+   "guess": "puses",
+   "target": "combo",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "steep",
+   "target": "acute",
+   "code": 12,
+   "letters": "byybb"
+  },
+  {
+   "guess": "slurs",
+   "target": "stamp",
+   "code": 2,
+   "letters": "gbbbb"
+  },
+  {
+   "guess": "kirns",
+   "target": "snibs",
+   "code": 192,
+   "letters": "bybyg"
+  },
+  {
+   "guess": "sipes",
+   "target": "heeze",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "visas",
+   "target": "baffs",
+   "code": 189,
+   "letters": "bbbyg"
+  },
+  {
+   "guess": "flats",
+   "target": "might",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "testy",
+   "target": "lulls",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "merge",
+   "target": "oozes",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "tarty",
+   "target": "motor",
+   "code": 10,
+   "letters": "ybybb"
+  },
+  {
+   "guess": "sexed",
+   "target": "plant",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "bitts",
+   "target": "terne",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "raved",
+   "target": "didie",
+   "code": 108,
+   "letters": "bbbyy"
+  },
+  {
+   "guess": "tawse",
+   "target": "plump",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "lalls",
+   "target": "spiny",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "aland",
+   "target": "feyly",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "heels",
+   "target": "bunny",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "guess",
+   "target": "radar",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "fluty",
+   "target": "hadal",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "ataxy",
+   "target": "axial",
+   "code": 38,
+   "letters": "gbyyb"
+  },
+  {
+   "guess": "lumen",
+   "target": "usury",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "cysts",
+   "target": "attic",
+   "code": 28,
+   "letters": "ybbyb"
+  },
+  {
+   "guess": "beeps",
+   "target": "abbes",
+   "code": 166,
+   "letters": "yybbg"
+  },
+  {
+   "guess": "atmas",
+   "target": "ousts",
+   "code": 165,
+   "letters": "bybbg"
+  },
+  {
+   "guess": "seems",
+   "target": "feued",
+   "code": 15,
+   "letters": "bgybb"
+  },
+  {
+   "guess": "dread",
+   "target": "redds",
+   "code": 94,
+   "letters": "yyyby"
+  },
+  {
+   "guess": "petit",
+   "target": "jinni",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "momus",
+   "target": "widow",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "mayas",
+   "target": "kraal",
+   "code": 57,
+   "letters": "bybgb"
+  },
+  {
+   "guess": "diced",
+   "target": "lexes",
+   "code": 54,
+   "letters": "bbbgb"
+  },
+  {
+   "guess": "lease",
+   "target": "slows",
+   "code": 28,
+   "letters": "ybbyb"
+  },
+  {
+   "guess": "delfs",
+   "target": "raias",
+   "code": 162,
+   "letters": "bbbbg"
+  },
+  {
+   "guess": "gulls",
+   "target": "sneer",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "hoppy",
+   "target": "resee",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "afoot",
+   "target": "squat",
+   "code": 163,
+   "letters": "ybbbg"
+  },
+  {
+   "guess": "lilts",
+   "target": "scads",
+   "code": 162,
+   "letters": "bbbbg"
+  },
+  {
+   "guess": "ghazi",
+   "target": "floss",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "seams",
+   "target": "pitch",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "dolor",
+   "target": "added",
+   "code": 1,
+   "letters": "ybbbb"
+  },
+  {
+   "guess": "buffy",
+   "target": "faena",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "adoze",
+   "target": "ionic",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "tilts",
+   "target": "canal",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "speak",
+   "target": "lipid",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "trued",
+   "target": "giver",
+   "code": 57,
+   "letters": "bybgb"
+  },
+  {
+   "guess": "mommy",
+   "target": "chain",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "eaves",
+   "target": "nutty",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "jumpy",
+   "target": "minus",
+   "code": 12,
+   "letters": "byybb"
+  },
+  {
+   "guess": "tipis",
+   "target": "chill",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "torii",
+   "target": "direr",
+   "code": 45,
+   "letters": "bbgyb"
+  },
+  {
+   "guess": "algas",
+   "target": "avert",
+   "code": 2,
+   "letters": "gbbbb"
+  },
+  {
+   "guess": "baggy",
+   "target": "howdy",
+   "code": 162,
+   "letters": "bbbbg"
+  },
+  {
+   "guess": "galls",
+   "target": "dojos",
+   "code": 162,
+   "letters": "bbbbg"
+  },
+  {
+   "guess": "salpa",
+   "target": "retry",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "savor",
+   "target": "droll",
+   "code": 108,
+   "letters": "bbbyy"
+  },
+  {
+   "guess": "ampul",
+   "target": "dodos",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "hurry",
+   "target": "sowed",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "tumps",
+   "target": "nerve",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "orzos",
+   "target": "snoop",
+   "code": 136,
+   "letters": "ybbgy"
+  },
+  {
+   "guess": "gussy",
+   "target": "quash",
+   "code": 60,
+   "letters": "bgbgb"
+  },
+  {
+   "guess": "agene",
+   "target": "voila",
+   "code": 1,
+   "letters": "ybbbb"
+  },
+  {
+   "guess": "parka",
+   "target": "tally",
+   "code": 6,
+   "letters": "bgbbb"
+  },
+  {
+   "guess": "trull",
+   "target": "logos",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "raser",
+   "target": "dekko",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "imido",
+   "target": "loots",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "gutty",
+   "target": "hists",
+   "code": 54,
+   "letters": "bbbgb"
+  },
+  {
+   "guess": "ogles",
+   "target": "thong",
+   "code": 4,
+   "letters": "yybbb"
+  },
+  {
+   "guess": "ichor",
+   "target": "oasts",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "stirs",
+   "target": "crest",
+   "code": 31,
+   "letters": "yybyb"
+  },
+  {
+   "guess": "pyric",
+   "target": "scall",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "poppy",
+   "target": "lurch",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "sines",
+   "target": "galas",
+   "code": 162,
+   "letters": "bbbbg"
+  },
+  {
+   "guess": "blini",
+   "target": "lemma",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "wisps",
+   "target": "happy",
+   "code": 54,
+   "letters": "bbbgb"
+  },
+  {
+   "guess": "meeds",
+   "target": "stymy",
+   "code": 82,
+   "letters": "ybbby"
+  },
+  {
+   "guess": "beset",
+   "target": "posse",
+   "code": 21,
+   "letters": "bygbb"
+  },
+  {
+   "guess": "shush",
+   "target": "cycas",
+   "code": 1,
+   "letters": "ybbbb"
+  },
+  {
+   "guess": "jemmy",
+   "target": "soars",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "scuta",
+   "target": "sycee",
+   "code": 5,
+   "letters": "gybbb"
+  },
+  {
+   "guess": "shell",
+   "target": "brash",
+   "code": 4,
+   "letters": "yybbb"
+  },
+  {
+   "guess": "riant",
+   "target": "revel",
+   "code": 2,
+   "letters": "gbbbb"
+  },
+  {
+   "guess": "epics",
+   "target": "shout",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "nocks",
+   "target": "frown",
+   "code": 4,
+   "letters": "yybbb"
+  },
+  {
+   "guess": "sorts",
+   "target": "durra",
+   "code": 18,
+   "letters": "bbgbb"
+  },
+  {
+   "guess": "masse",
+   "target": "match",
+   "code": 8,
+   "letters": "ggbbb"
+  },
+  {
+   "guess": "tinny",
+   "target": "solve",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "yummy",
+   "target": "mells",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "iliad",
+   "target": "silts",
+   "code": 4,
+   "letters": "yybbb"
+  },
+  {
+   "guess": "rammy",
+   "target": "fucus",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "darks",
+   "target": "baron",
+   "code": 24,
+   "letters": "bggbb"
+  },
+  {
+   "guess": "vests",
+   "target": "ovary",
+   "code": 1,
+   "letters": "ybbbb"
+  },
+  {
+   "guess": "ruers",
+   "target": "proof",
+   "code": 1,
+   "letters": "ybbbb"
+  },
+  {
+   "guess": "posse",
+   "target": "caper",
+   "code": 82,
+   "letters": "ybbby"
+  },
+  {
+   "guess": "carry",
+   "target": "swops",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "vulva",
+   "target": "poker",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "skirr",
+   "target": "sheet",
+   "code": 2,
+   "letters": "gbbbb"
+  },
+  {
+   "guess": "putts",
+   "target": "hooty",
+   "code": 54,
+   "letters": "bbbgb"
+  },
+  {
+   "guess": "lossy",
+   "target": "ancon",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "berme",
+   "target": "pumps",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "sires",
+   "target": "weave",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "dauby",
+   "target": "twill",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "creel",
+   "target": "arias",
+   "code": 6,
+   "letters": "bgbbb"
+  },
+  {
+   "guess": "hurds",
+   "target": "beefy",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "creek",
+   "target": "quack",
+   "code": 163,
+   "letters": "ybbbg"
+  },
+  {
+   "guess": "newel",
+   "target": "tacit",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "drill",
+   "target": "revue",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "bawds",
+   "target": "dozed",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "khaki",
+   "target": "chico",
+   "code": 87,
+   "letters": "bgbby"
+  },
+  {
+   "guess": "repel",
+   "target": "sinhs",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "linin",
+   "target": "mixer",
+   "code": 6,
+   "letters": "bgbbb"
+  },
+  {
+   "guess": "perea",
+   "target": "ruddy",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "tests",
+   "target": "domed",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "fired",
+   "target": "flame",
+   "code": 29,
+   "letters": "gbbyb"
+  },
+  {
+   "guess": "beets",
+   "target": "retro",
+   "code": 33,
+   "letters": "bgbyb"
+  },
+  {
+   "guess": "swage",
+   "target": "scoff",
+   "code": 2,
+   "letters": "gbbbb"
+  },
+  {
+   "guess": "ragas",
+   "target": "forum",
+   "code": 1,
+   "letters": "ybbbb"
+  },
+  {
+   "guess": "varve",
+   "target": "culch",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "whiff",
+   "target": "avian",
+   "code": 18,
+   "letters": "bbgbb"
+  },
+  {
+   "guess": "woody",
+   "target": "carer",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "peaty",
+   "target": "cuter",
+   "code": 30,
+   "letters": "bybyb"
+  },
+  {
+   "guess": "oomph",
+   "target": "blitz",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "fillo",
+   "target": "spoof",
+   "code": 82,
+   "letters": "ybbby"
+  },
+  {
+   "guess": "gonzo",
+   "target": "sonar",
+   "code": 24,
+   "letters": "bggbb"
+  },
+  {
+   "guess": "lazar",
+   "target": "nyala",
+   "code": 31,
+   "letters": "yybyb"
+  },
+  {
+   "guess": "currs",
+   "target": "drink",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "animi",
+   "target": "thymy",
+   "code": 54,
+   "letters": "bbbgb"
+  },
+  {
+   "guess": "ouphs",
+   "target": "reset",
+   "code": 81,
+   "letters": "bbbby"
+  },
+  {
+   "guess": "surer",
+   "target": "utter",
+   "code": 219,
+   "letters": "bybgg"
+  },
+  {
+   "guess": "lilac",
+   "target": "exist",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "inane",
+   "target": "canny",
+   "code": 66,
+   "letters": "byygb"
+  },
+  {
+   "guess": "dusty",
+   "target": "staff",
+   "code": 36,
+   "letters": "bbyyb"
+  },
+  {
+   "guess": "mongo",
+   "target": "hotly",
+   "code": 6,
+   "letters": "bgbbb"
+  },
+  {
+   "guess": "alang",
+   "target": "swill",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "cirri",
+   "target": "input",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "speel",
+   "target": "adopt",
+   "code": 3,
+   "letters": "bybbb"
+  },
+  {
+   "guess": "whish",
+   "target": "celli",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "culch",
+   "target": "vicar",
+   "code": 1,
+   "letters": "ybbbb"
+  },
+  {
+   "guess": "byssi",
+   "target": "preen",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "rater",
+   "target": "daddy",
+   "code": 6,
+   "letters": "bgbbb"
+  },
+  {
+   "guess": "blabs",
+   "target": "brand",
+   "code": 20,
+   "letters": "gbgbb"
+  },
+  {
+   "guess": "immix",
+   "target": "dippy",
+   "code": 1,
+   "letters": "ybbbb"
+  },
+  {
+   "guess": "specs",
+   "target": "sonar",
+   "code": 2,
+   "letters": "gbbbb"
+  },
+  {
+   "guess": "adust",
+   "target": "jetes",
+   "code": 108,
+   "letters": "bbbyy"
+  },
+  {
+   "guess": "toyer",
+   "target": "shist",
+   "code": 1,
+   "letters": "ybbbb"
+  },
+  {
+   "guess": "snows",
+   "target": "boots",
+   "code": 180,
+   "letters": "bbgbg"
+  },
+  {
+   "guess": "skees",
+   "target": "gloom",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "edged",
+   "target": "aging",
+   "code": 9,
+   "letters": "bbybb"
+  },
+  {
+   "guess": "ruddy",
+   "target": "witch",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "tufty",
+   "target": "modal",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "totem",
+   "target": "haiku",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "utile",
+   "target": "moony",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "pouts",
+   "target": "whirr",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "felly",
+   "target": "fresh",
+   "code": 5,
+   "letters": "gybbb"
+  },
+  {
+   "guess": "briar",
+   "target": "tally",
+   "code": 27,
+   "letters": "bbbyb"
+  },
+  {
+   "guess": "cepes",
+   "target": "kneel",
+   "code": 57,
+   "letters": "bybgb"
+  },
+  {
+   "guess": "daffy",
+   "target": "shins",
+   "code": 0,
+   "letters": "bbbbb"
+  },
+  {
+   "guess": "hamal",
+   "target": "natal",
+   "code": 222,
+   "letters": "bgbgg"
+  },
+  {
+   "guess": "bobby",
+   "target": "boppy",
+   "code": 170,
+   "letters": "ggbbg"
+  },
+  {
+   "guess": "tatty",
+   "target": "taffy",
+   "code": 170,
+   "letters": "ggbbg"
+  },
+  {
+   "guess": "abcdef",
+   "target": "fedcba",
+   "code": 364,
+   "letters": "yyyyyy"
+  },
+  {
+   "guess": "aabb",
+   "target": "bbaa",
+   "code": 40,
+   "letters": "yyyy"
+  },
+  {
+   "guess": "letters",
+   "target": "settler",
+   "code": 1132,
+   "letters": "ygggyyy"
+  }
+ ]
+}
