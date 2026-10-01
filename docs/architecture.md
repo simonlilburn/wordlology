@@ -123,7 +123,9 @@ random order: for `r` in the replicate range, for `t` in
 shuffle driven by ChaCha8 seeded from BLAKE3 of
 `"wordlology/order/v1\0" ‖ base_seed ‖ strategy canonical JSON ‖ "\0" ‖ opener or ""`.
 Every prefix of the stream is therefore an unbiased sample of the card.
-Distributions are memoised in an LRU cache keyed by `StateKey`.
+Distributions are memoised in a bounded cache (32 MB) keyed by `StateKey`;
+it evicts by cost (time to recompute per byte held) rather than by age, so
+expensive distributions such as the first turn without an opener stay cached.
 
 **Scope** `{ "targets": "all" | [answer indices] | {"sample": n}, "replicates": [start, end] }`.
 `"all"` plays every answer in the seeded order; a sample takes the first n
@@ -326,6 +328,9 @@ ISO 8601 times, no comments; numbers with up to 6 significant decimals.
 - **Shared pattern matrix**: each worker builds its own matrix inside WASM
   memory; a SharedArrayBuffer copy would still need copying into each
   instance's linear memory. COOP/COEP headers are still sent.
+- **Distribution cache**: cost-aware eviction instead of least recently used
+  (results are identical either way; only speed differs). The browser's
+  IndexedDB result cache is LRU as specified.
 - **Plural rule**: words ending in `-ss` (abyss, brass, …) are not treated as
   -s plurals, so 2,455 words are removed rather than 2,461.
 
@@ -339,3 +344,17 @@ ISO 8601 times, no comments; numbers with up to 6 significant decimals.
   next step.
 - **Letter-filter vowels** follow the setting "Y counts as a vowel"; the
   classes are otherwise fixed to English (`aeiou`).
+
+## Measured performance
+
+Native timings from `wordlology bench` (release, 4-core VM) against the
+specification's targets; the WASM build in Node is within about 1.5× of them.
+
+| Measure | Target | Measured |
+| --- | --- | --- |
+| Pattern matrix build (8,636 × 2,500) | ≤ 0.5 s | 35 ms native, 100–165 ms WASM (first call) |
+| Deterministic `max_info` card, all answers | ≤ 2 s | 5–155 ms (candidate or allowed pool) |
+| Stochastic tree, one target, R = 200 | ≤ 1 s | 1–2 ms |
+| Stochastic card, R = 20 (opener / none) | ≤ 10 s | 0.4 s / 2.8 s |
+| First load, gzipped (JS, CSS, WASM, worker, word list) | ≤ 1.5 MB | about 0.6 MB |
+| Page load to solver ready (production, headless Chromium) | — | 0.8–1.0 s |
