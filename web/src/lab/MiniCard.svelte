@@ -56,7 +56,7 @@
     padding: 10px;
     border: 1px solid var(--line);
     border-top: 4px solid var(--c);
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: var(--bg);
     max-width: 320px;
   }

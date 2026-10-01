@@ -369,10 +369,10 @@
 
   {#snippet footer()}
     <p class="status" role="status" aria-live="polite">{status}</p>
-    <button type="button" class="btn" onclick={reset} disabled={nChanged === 0}>
+    <button type="button" class="btn kc" onclick={reset} disabled={nChanged === 0}>
       Reset to defaults{#if nChanged}{' '}<span class="count">({nChanged})</span>{/if}
     </button>
-    <button type="button" class="btn primary" onclick={close}>Done</button>
+    <button type="button" class="btn kc primary" onclick={close}>Done</button>
   {/snippet}
 </Dialog>
 
@@ -386,7 +386,7 @@
     display: grid;
     gap: 4px;
     padding: 10px 12px;
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: var(--panel);
     font-size: 0.85rem;
     color: var(--muted);
@@ -466,7 +466,7 @@
     min-height: 44px;
     padding: 0 16px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: var(--bg);
     color: var(--fg);
     cursor: pointer;
@@ -478,9 +478,9 @@
     cursor: default;
   }
   .btn.primary {
-    background: var(--fg);
-    border-color: var(--fg);
-    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
   }
   .settings :global(input[type='number']),
   .select {
@@ -563,7 +563,7 @@
     display: inline-flex;
     flex-wrap: wrap;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     overflow: hidden;
   }
   .seg-opt {
@@ -597,7 +597,7 @@
   }
   .seg-opt input:checked + span {
     background: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
     font-weight: 650;
   }
   .seg-opt input:focus-visible + span {

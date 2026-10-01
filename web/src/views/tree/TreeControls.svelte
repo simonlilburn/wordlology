@@ -86,7 +86,7 @@
     gap: 2px;
     padding: 3px;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: color-mix(in srgb, var(--bg) 88%, transparent);
     box-shadow: 0 2px 10px rgb(0 0 0 / 0.08);
   }

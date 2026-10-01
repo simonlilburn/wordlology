@@ -44,8 +44,8 @@ export type TargetSort = 'alpha' | 'mean' | 'fail' | 'breadth' | 'random';
 export const paneState = $state({
   /** Bottom sheet height state on phones. */
   sheet: 'half' as SheetState,
-  /** Whether the layout is the phone layout (bottom sheet). */
-  phone: false,
+  /** Whether the layout is the phone layout (bottom sheet); SidePane keeps it in sync with the viewport. */
+  phone: typeof matchMedia === 'function' ? matchMedia('(max-width: 720px)').matches : false,
   /** Filter builder expanded in the pane. */
   filterOpen: false,
   /** Reveal-matches request counter (see header). */

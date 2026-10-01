@@ -158,10 +158,12 @@
     place-items: center;
     border: 2px solid var(--line);
     background: transparent;
+    border-radius: 4px;
     color: var(--fg);
-    font-family: var(--font-sans);
+    font-family: var(--font-display);
+    font-stretch: 90%;
     font-weight: 800;
-    font-size: calc(var(--tile) * 0.52);
+    font-size: calc(var(--tile) * 0.54);
     line-height: 1;
     text-transform: uppercase;
     user-select: none;
@@ -185,6 +187,8 @@
     background: var(--c);
     border-color: var(--c);
     color: var(--tile-text);
+    /* A stamped tile: slightly darker lower edge. */
+    box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.16);
   }
   .letter {
     text-shadow: 0 1px 1px rgb(0 0 0 / 0.12);

@@ -89,7 +89,7 @@
         {#if check.unknown.length}<p class="warn">Not in the guess list: {listSome(check.unknown)}</p>{/if}
         {#if check.malformed.length}<p class="warn">Not {lexicon.wordLength}-letter words: {listSome(check.malformed)}</p>{/if}
       {/if}
-      <button type="button" class="btn" disabled={!check || check.words.length === 0 || pastedApplied} onclick={applyPaste}>
+      <button type="button" class="btn kc" disabled={!check || check.words.length === 0 || pastedApplied} onclick={applyPaste}>
         {pastedApplied ? 'In use' : check && check.words.length ? `Use these ${fmtInt(check.words.length)} openers` : 'Use these openers'}
       </button>
     </div>

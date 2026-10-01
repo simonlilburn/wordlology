@@ -114,7 +114,7 @@
 
   {#snippet footer()}
     <span class="spacer"></span>
-    <button type="button" class="btn primary" onclick={close}>Done</button>
+    <button type="button" class="btn kc primary" onclick={close}>Done</button>
   {/snippet}
 </Dialog>
 
@@ -176,14 +176,14 @@
     min-height: 44px;
     padding: 0 16px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: var(--radius);
     cursor: pointer;
     font-weight: 600;
   }
   .btn.primary {
-    background: var(--fg);
-    border-color: var(--fg);
-    color: var(--bg);
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
   }
   .btn:focus-visible {
     outline: 2px solid var(--accent);

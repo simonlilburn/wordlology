@@ -31,6 +31,20 @@
   let el: HTMLDialogElement | undefined = $state();
   let opener: HTMLElement | null = null;
 
+  // A body that scrolls takes keyboard focus, so it can be scrolled without a pointer (WCAG 2.1.1).
+  let bodyEl: HTMLElement | undefined = $state();
+  let scrollable = $state(false);
+  $effect(() => {
+    const b = bodyEl;
+    if (!b || typeof ResizeObserver === 'undefined') return;
+    const check = () => (scrollable = b.scrollHeight > b.clientHeight + 1);
+    const ro = new ResizeObserver(check);
+    ro.observe(b);
+    for (const c of b.children) ro.observe(c);
+    check();
+    return () => ro.disconnect();
+  });
+
   const FOCUSABLE =
     'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -124,7 +138,15 @@
           >
         </button>
       </header>
-      <div class="body" data-dialog-body>
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+      <div
+        class="body"
+        data-dialog-body
+        bind:this={bodyEl}
+        role={scrollable ? 'region' : undefined}
+        aria-labelledby={scrollable ? `${id}-title` : undefined}
+        tabindex={scrollable ? 0 : undefined}
+      >
         {@render children()}
       </div>
       {#if footer}
@@ -210,7 +232,7 @@
     display: grid;
     place-items: center;
     border: none;
-    border-radius: 10px;
+    border-radius: var(--radius);
     background: transparent;
     color: var(--fg);
     cursor: pointer;
@@ -221,6 +243,10 @@
   .close:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+  .body:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: -3px;
   }
   .body {
     flex: 1;
