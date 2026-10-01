@@ -10,3 +10,7 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# Deploy credentials
+flyio.key
+*.key
