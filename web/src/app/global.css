@@ -56,6 +56,8 @@ html, body {
   color: var(--fg);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  /* Native checkboxes, radios and ranges in the accent green. */
+  accent-color: var(--accent);
 }
 button, input, select, textarea { font: inherit; }
 h1, h2, h3 { font-family: var(--font-display); font-stretch: 92%; letter-spacing: -0.01em; }

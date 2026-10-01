@@ -113,5 +113,13 @@ test('phone: game view and bottom sheet', async ({ page }) => {
   await expect(sheet.getByRole('region', { name: 'Selected path' })).toBeVisible();
   await expect(sheet.getByRole('button', { name: /^Export/ })).toBeAttached();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(W);
+
+  // The letter filter, opened, fits the sheet's width (no sideways scrolling).
+  const filterBtn = sheet.getByRole('button', { name: /^Filter/ });
+  await filterBtn.tap();
+  await expect(filterBtn).toHaveAttribute('aria-expanded', 'true');
+  await expect(sheet.locator('#pane-filter-builder')).toBeVisible();
+  const scroll = sheet.locator('.scroll');
+  expect(await scroll.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
   expect(errors).toEqual([]);
 });

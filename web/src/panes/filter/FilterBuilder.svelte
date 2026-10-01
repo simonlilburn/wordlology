@@ -436,10 +436,13 @@
   }
   .extras {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* minmax(0, …): the inputs' default width (about 20 characters of the
+       mono face) must not widen the pane. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
   }
   .extras label:not(.check) {
+    min-width: 0;
     display: flex;
     flex-direction: column;
     font-size: 0.75rem;
@@ -456,6 +459,7 @@
     background: var(--bg);
     color: var(--fg);
     font: 600 0.95rem var(--font-mono);
+    width: 100%;
     min-width: 0;
   }
   .check {
