@@ -22,3 +22,7 @@ web/tests
 fly.toml
 Dockerfile
 .dockerignore
+
+# Deploy credentials never go to the builder.
+flyio.key
+*.key
