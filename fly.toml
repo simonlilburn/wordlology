@@ -2,7 +2,7 @@
 #   fly launch --no-deploy --copy-config   (first time; keeps this file)
 #   fly deploy
 app = "wordlology"
-primary_region = "lhr"
+primary_region = "iad"
 
 [build]
   dockerfile = "Dockerfile"
