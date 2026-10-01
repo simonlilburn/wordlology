@@ -9,8 +9,9 @@
 //! `p`, those also in `s` are green; the rest, left to right, are yellow
 //! while the answer has copies of `l` left over, that is for the first
 //! `min(|s|, |p|) − |p ∩ s|` of them; the others are absent. This is exactly
-//! [`feedback`]'s rule (greens first, then yellows left to right against the
-//! remaining letter counts), since other letters never touch `l`'s count. So
+//! the rule of [`crate::feedback`] (greens first, then yellows left to right
+//! against the remaining letter counts), since other letters never touch
+//! `l`'s count. So
 //!
 //! ```text
 //! pattern(g, a) = Σ over distinct letters l of g: contrib[p_l(g)][s_l(a)]
@@ -116,9 +117,7 @@ impl<T: Cell> RowBuilder<T> {
         self.contrib[p * MASKS..(p + 1) * MASKS].try_into().expect("a full row")
     }
 
-    /// Fill one row. Not inlined, so a WASM engine can optimise it after
-    /// the first few calls instead of running the whole build unoptimised.
-    #[inline(never)]
+    /// Fill one row.
     fn fill(&self, guess: &[u8], row: &mut [T]) {
         // Distinct letters of the guess with their position masks, padded
         // with blanks (which contribute nothing) to at least four.

@@ -5,6 +5,10 @@ use crate::schema::{ParamField, ParamSchema, ParamType};
 use crate::spec::Pool;
 use crate::{rank_scores, Ctx, Dist, Resources, State, StateKey, Strategy};
 
+/// Guesses scored together (in increasing id order, as before; a batch may
+/// score a few words past the one that ends the search).
+const BATCH: usize = 16;
+
 /// Deterministic: the word with the highest expected information, the
 /// entropy of its feedback distribution over C. Ties break toward words in
 /// C, then the lower word id.
@@ -47,13 +51,14 @@ impl MaxInfo {
         let mut cands = ctx.candidate_words(state);
         cands.sort_unstable(); // answer order is id order for sorted lists; don't rely on it
         let mut best_cand: Option<(WordId, f64)> = None;
-        for &w in &cands {
-            let s = scorer.score(ctx.matrix, w);
-            if s == max {
-                return w;
-            }
-            if best_cand.is_none_or(|(_, b)| s > b) {
-                best_cand = Some((w, s));
+        for batch in cands.chunks(BATCH) {
+            for (&w, s) in batch.iter().zip(scorer.score_many(ctx.matrix, batch)) {
+                if s == max {
+                    return w;
+                }
+                if best_cand.is_none_or(|(_, b)| s > b) {
+                    best_cand = Some((w, s));
+                }
             }
         }
         let (cand, cand_score) = best_cand.expect("no candidates");
@@ -66,16 +71,24 @@ impl MaxInfo {
             seen.extend(cands.iter().map(|&w| eq.key(ctx.list.letters(w))));
         }
         let mut best_other: Option<(WordId, f64)> = None;
-        for w in ctx.allowed_words(state) {
-            if ctx.is_candidate(state, w) || (eq.useful() && !seen.insert(eq.key(ctx.list.letters(w)))) {
-                continue;
+        let mut others = ctx
+            .allowed_words(state)
+            .into_iter()
+            .filter(|&w| !(ctx.is_candidate(state, w) || (eq.useful() && !seen.insert(eq.key(ctx.list.letters(w))))));
+        let mut batch = Vec::with_capacity(BATCH);
+        loop {
+            batch.clear();
+            batch.extend(others.by_ref().take(BATCH));
+            if batch.is_empty() {
+                break;
             }
-            let s = scorer.score(ctx.matrix, w);
-            if s == max {
-                return w;
-            }
-            if best_other.is_none_or(|(_, b)| s > b) {
-                best_other = Some((w, s));
+            for (&w, s) in batch.iter().zip(scorer.score_many(ctx.matrix, &batch)) {
+                if s == max {
+                    return w;
+                }
+                if best_other.is_none_or(|(_, b)| s > b) {
+                    best_other = Some((w, s));
+                }
             }
         }
         match best_other {

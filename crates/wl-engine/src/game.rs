@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use wl_core::{expected_info, AnswerIdx, WordId, WordList};
 use wl_strategy::{Choice, Ctx, Dist, State};
 
-use crate::cache::DistCache;
+use crate::cache::{DistCache, Stored};
 use crate::{Engine, EngineError, Prepared};
 
 /// `Turn::phase` of an opener set by the configuration.
@@ -114,6 +114,14 @@ impl Prepared {
         }
     }
 
+    /// [`Prepared::distribution`] in the form the cache holds.
+    fn stored_distribution(&self, ctx: &Ctx, state: &State, cache: Option<&mut DistCache>) -> Arc<Stored> {
+        match cache {
+            Some(c) => c.get_stored(self.strategy.state_key(state), || self.strategy.distribution(ctx, state)),
+            None => Arc::new(Stored::from_dist(&self.strategy.distribution(ctx, state))),
+        }
+    }
+
     /// Play replicate `replicate` against `target`.
     pub fn play(&self, engine: &Engine, target: AnswerIdx, replicate: u32, cache: Option<&mut DistCache>) -> Game {
         self.play_from(engine, target, replicate, &[], None, cache)
@@ -182,7 +190,7 @@ impl Prepared {
             let (choice, dist) = match self.opener {
                 Some(o) if state.turn == 0 => (Choice { word: o, p: 1.0, phase: PHASE_OPENER }, None),
                 _ => {
-                    let d = self.distribution(&ctx, &state, cache.as_deref_mut());
+                    let d = self.stored_distribution(&ctx, &state, cache.as_deref_mut());
                     (d.sample(&mut rng), Some(d))
                 }
             };

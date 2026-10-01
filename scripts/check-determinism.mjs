@@ -248,6 +248,10 @@ check('info_proportional β = 2.5, seed 7, 8 guesses, top 1000', config({ kind: 
 }), { targets: { sample: 200 } });
 if (!quick) {
   check('info_proportional, opener crane, card R = 20', config(infoProp, { opener: 'crane', replicates: 20 }), all);
+  // The heaviest stochastic card: large second-turn states, so the
+  // distribution cache evicts and recomputes, and the first turn's long
+  // distribution is sampled 50,000 times.
+  check('info_proportional, no opener, card R = 20', config(infoProp, { replicates: 20 }), all);
 }
 
 // Every catalogue preset (whatever wl-strategy implements), normal and hard mode.

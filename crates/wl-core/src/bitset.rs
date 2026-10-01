@@ -45,7 +45,8 @@ impl CandidateSet {
     /// which must have no bits at or above `universe`.
     pub fn from_words(universe: usize, bits: Vec<u64>) -> CandidateSet {
         assert_eq!(bits.len(), universe.div_ceil(64), "wrong number of words for the universe");
-        debug_assert!(universe % 64 == 0 || bits.last().is_none_or(|&w| w >> (universe % 64) == 0));
+        let tail = universe % 64;
+        debug_assert!(tail == 0 || bits.last().is_none_or(|&w| w >> tail == 0), "bits beyond the universe");
         let len = bits.iter().map(|w| w.count_ones() as usize).sum();
         CandidateSet { bits, universe, len }
     }

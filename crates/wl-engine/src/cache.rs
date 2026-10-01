@@ -8,17 +8,20 @@
 //! often stay longest, and entries not used for a while age out as `L`
 //! rises. (Information-based strategies over the candidates cost |C|² to
 //! compute but hold |C| entries, so the large states they revisit are the
-//! ones worth keeping.) Memory is bounded by the entry count and by the total
-//! number of distribution entries held. The cache only saves work: a miss
-//! recomputes the same distribution, so results never depend on it (nor on
-//! the clock that measures costs).
+//! ones worth keeping.) Distributions are held as [`Stored`], 10 bytes an
+//! entry instead of a [`Dist`]'s 16. Memory is bounded by the entry count and
+//! by the total weight held. The cache only saves work: a miss recomputes the
+//! same distribution, so results never depend on it (nor on the clock that
+//! measures costs).
 
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap};
 use std::hash::{BuildHasherDefault, Hasher};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
-use wl_strategy::{Dist, StateKey};
+use rand::RngCore;
+use wl_core::WordId;
+use wl_strategy::{Choice, Dist, DistEntry, StateKey};
 
 use crate::run::default_clock;
 
@@ -49,17 +52,151 @@ type KeyMap<V> = HashMap<StateKey, V, BuildHasherDefault<KeyHasher>>;
 
 /// Default bound on cached distributions.
 pub const DEFAULT_MAX_ENTRIES: usize = 100_000;
-/// Default bound on the total number of distribution entries held (16 bytes
-/// each, so 32 MB). Phones may run four workers, each with its own cache and
+/// Default bound on the total weight held. A distribution weighs its number
+/// of entries (10 bytes each as [`Stored`]) plus [`OVERHEAD_WEIGHT`], so this
+/// is about 32 MB. Phones may run four workers, each with its own cache and
 /// pattern matrix, within a 300 MB budget.
-pub const DEFAULT_MAX_WEIGHT: usize = 2_000_000;
+pub const DEFAULT_MAX_WEIGHT: usize = 3_200_000;
+/// Weight added to every distribution for its bookkeeping (about 160 bytes).
+pub const OVERHEAD_WEIGHT: usize = 16;
+
+/// A distribution as the cache holds it: the entries of a [`Dist`] in the
+/// same order, without per-entry padding. [`Stored::sample`] and
+/// [`Stored::prob_of`] are exactly [`Dist::sample`] and [`Dist::prob_of`].
+#[derive(Clone, Debug)]
+pub struct Stored {
+    words: Box<[WordId]>,
+    p: Box<[f64]>,
+    /// Every entry's phase, or empty when all entries have `phase`.
+    phases: Box<[u8]>,
+    phase: u8,
+    /// Built for distributions sampled often (see [`Stored::index`]).
+    index: OnceLock<Index>,
+}
+
+/// What makes sampling a long distribution logarithmic.
+#[derive(Clone, Debug)]
+struct Index {
+    /// `cum[i] = p[0] + … + p[i]`, added left to right as [`Dist::sample`] adds them.
+    cum: Box<[f64]>,
+    /// Whether every word appears once (so its total probability is its `p`).
+    distinct: bool,
+}
+
+impl PartialEq for Stored {
+    fn eq(&self, other: &Self) -> bool {
+        (&self.words, &self.p, &self.phases, self.phase) == (&other.words, &other.p, &other.phases, other.phase)
+    }
+}
+
+impl Stored {
+    pub fn from_dist(d: &Dist) -> Stored {
+        let phase = d.entries.first().map_or(0, |e| e.phase);
+        let uniform = d.entries.iter().all(|e| e.phase == phase);
+        Stored {
+            words: d.entries.iter().map(|e| e.word).collect(),
+            p: d.entries.iter().map(|e| e.p).collect(),
+            phases: if uniform { Box::default() } else { d.entries.iter().map(|e| e.phase).collect() },
+            phase,
+            index: OnceLock::new(),
+        }
+    }
+
+    pub fn to_dist(&self) -> Dist {
+        Dist { entries: (0..self.len()).map(|i| self.entry(i)).collect() }
+    }
+
+    pub fn len(&self) -> usize {
+        self.words.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.words.is_empty()
+    }
+
+    #[inline]
+    fn entry(&self, i: usize) -> DistEntry {
+        DistEntry { word: self.words[i], p: self.p[i], phase: self.phases.get(i).copied().unwrap_or(self.phase) }
+    }
+
+    /// Build the running sums that let [`Stored::sample`] binary-search
+    /// instead of walking the entries (8 more bytes an entry). Results are
+    /// the same either way.
+    pub fn index(&self) {
+        self.index.get_or_init(|| {
+            let mut acc = 0.0;
+            let cum = self
+                .p
+                .iter()
+                .map(|&p| {
+                    acc += p;
+                    acc
+                })
+                .collect();
+            let mut seen = vec![0u64; self.words.iter().max().map_or(0, |&w| w as usize / 64 + 1)];
+            let distinct = self.words.iter().all(|&w| {
+                let (word, bit) = (w as usize / 64, 1u64 << (w % 64));
+                let new = seen[word] & bit == 0;
+                seen[word] |= bit;
+                new
+            });
+            Index { cum, distinct }
+        });
+    }
+
+    /// Total probability of a word (as [`Dist::prob_of`]).
+    pub fn prob_of(&self, word: WordId) -> f64 {
+        self.words.iter().zip(self.p.iter()).filter(|(w, _)| **w == word).map(|(_, p)| *p).sum()
+    }
+
+    /// Draw one entry, exactly as [`Dist::sample`]: one `next_u64` draw, or
+    /// none for a single entry.
+    pub fn sample(&self, rng: &mut dyn RngCore) -> Choice {
+        let index = self.index.get();
+        let i = if self.len() == 1 {
+            0
+        } else {
+            // 53 random bits -> uniform in [0, 1).
+            let u = (rng.next_u64() >> 11) as f64 * (1.0 / (1u64 << 53) as f64);
+            let last = self.len().checked_sub(1).expect("empty distribution");
+            match index {
+                // The first entry whose running sum exceeds u, as the walk below
+                // finds it: the sums never decrease.
+                Some(ix) => ix.cum.partition_point(|&c| c <= u).min(last),
+                None => {
+                    let mut acc = 0.0;
+                    let mut chosen = last;
+                    for (i, &p) in self.p.iter().enumerate() {
+                        acc += p;
+                        if u < acc {
+                            chosen = i;
+                            break;
+                        }
+                    }
+                    chosen
+                }
+            }
+        };
+        let e = self.entry(i);
+        let p = match index {
+            // The same sum over the one matching entry.
+            Some(ix) if ix.distinct => std::iter::once(e.p).sum(),
+            _ => self.prob_of(e.word),
+        };
+        Choice { word: e.word, p, phase: e.phase }
+    }
+}
+
+/// Distributions at least this long get an [`Stored::index`] once used this often.
+const INDEX_MIN_LEN: usize = 256;
+const INDEX_MIN_USES: u32 = 32;
 
 /// The smallest cost (milliseconds) an entry is given, so a coarse clock that
 /// reads no time passing still ranks entries by size and use.
 const MIN_COST_MS: f64 = 1e-6;
 
 struct Entry {
-    dist: Arc<Dist>,
+    dist: Arc<Stored>,
     /// Milliseconds the distribution took to compute.
     cost: f64,
     weight: usize,
@@ -139,11 +276,22 @@ impl DistCache {
 
     /// The distribution for `key`, computing and caching it on a miss.
     pub fn get_or_insert_with(&mut self, key: StateKey, compute: impl FnOnce() -> Dist) -> Arc<Dist> {
+        Arc::new(self.get_stored(key, compute).to_dist())
+    }
+
+    /// The distribution for `key` as the cache holds it, computing and caching it on a miss.
+    pub fn get_stored(&mut self, key: StateKey, compute: impl FnOnce() -> Dist) -> Arc<Stored> {
         self.seq += 1;
         let seq = self.seq;
         if let Some(e) = self.map.get_mut(&key) {
             self.hits += 1;
             e.uses = e.uses.saturating_add(1);
+            if e.uses == INDEX_MIN_USES && e.dist.len() >= INDEX_MIN_LEN {
+                e.dist.index();
+                // The running sums weigh about as much as the entries.
+                e.weight += e.dist.len();
+                self.weight += e.dist.len();
+            }
             e.seq = seq;
             let priority = self.floor + e.uses as f64 * e.cost / e.weight as f64;
             let d = e.dist.clone();
@@ -152,9 +300,9 @@ impl DistCache {
         }
         self.misses += 1;
         let t0 = (self.clock)();
-        let dist = Arc::new(compute());
+        let dist = Arc::new(Stored::from_dist(&compute()));
         let cost = ((self.clock)() - t0).max(MIN_COST_MS);
-        let weight = dist.entries.len().max(1);
+        let weight = dist.len() + OVERHEAD_WEIGHT;
         while !self.map.is_empty() && (self.map.len() + 1 > self.max_entries || self.weight + weight > self.max_weight)
         {
             self.evict();
@@ -243,6 +391,35 @@ mod tests {
         move || {
             NOW.with(|t| t.set(t.get() + ms));
             Dist::from_weights(&(0..n).collect::<Vec<_>>(), &vec![1.0; n as usize], 0)
+        }
+    }
+
+    #[test]
+    fn stored_samples_as_dist() {
+        use rand::SeedableRng;
+        use rand_chacha::ChaCha8Rng;
+        let e = |word: u16, p: f64, phase: u8| DistEntry { word, p, phase };
+        let dists = [
+            Dist::single(7, 3),
+            Dist::from_weights(&[1, 2, 3, 4], &[0.1, 0.0, 2.5, 1.0 / 3.0], 1),
+            Dist::from_weights(&(0..500).collect::<Vec<_>>(), &(0..500).map(|i| (i % 7) as f64).collect::<Vec<_>>(), 0),
+            // A mixture: repeated words under several phases, and a total a little under 1.
+            Dist { entries: vec![e(5, 0.3, 0), e(9, 0.2, 1), e(5, 0.1, 1), e(2, 0.39999, 2), e(9, 1e-17, 0)] },
+        ];
+        for (d, indexed) in dists.iter().flat_map(|d| [(d, false), (d, true)]) {
+            let s = Stored::from_dist(d);
+            if indexed {
+                s.index();
+            }
+            assert_eq!(&s.to_dist(), d);
+            for w in 0..12 {
+                assert_eq!(s.prob_of(w).to_bits(), d.prob_of(w).to_bits());
+            }
+            for seed in 0..300 {
+                let (mut a, mut b) = (ChaCha8Rng::seed_from_u64(seed), ChaCha8Rng::seed_from_u64(seed));
+                assert_eq!(s.sample(&mut a), d.sample(&mut b));
+                assert_eq!(a.next_u64(), b.next_u64(), "the same number of draws");
+            }
         }
     }
 
