@@ -75,6 +75,7 @@ export function mergeSettings<T extends object>(defaults: T, raw: unknown): T {
 }
 
 const DISPLAY_CHOICES: Partial<Record<keyof DisplaySettings, readonly unknown[]>> = {
+  theme: ['light', 'dark', 'system'],
   palette: ['standard', 'high-contrast'],
   growthAnimation: ['full', 'fast', 'off'],
   filterScope: ['tree', 'all'],

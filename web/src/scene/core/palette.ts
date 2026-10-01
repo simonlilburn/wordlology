@@ -3,6 +3,7 @@
 // palette setting or the colour scheme changes.
 
 import { app } from '../../app/store.svelte';
+import { isDark } from '../../app/theme.svelte';
 
 export type RGB = [number, number, number];
 
@@ -28,18 +29,18 @@ export interface Palette {
 }
 
 const LIGHT = {
-  bg: '#ffffff',
-  fg: '#1a1a1b',
-  muted: '#6b6b70',
-  line: '#d3d6da',
-  panel: '#f7f7f8',
-  accent: '#7c5cff',
+  bg: '#fbfbf8',
+  fg: '#1b1f1a',
+  muted: '#5d665b',
+  line: '#cad0c6',
+  panel: '#f1f3ee',
+  accent: '#2f6b3a',
   correct: '#6aaa64',
   present: '#c9b458',
   absent: '#787c7e',
   tileText: '#ffffff',
 };
-const DARK = { ...LIGHT, bg: '#121213', fg: '#f2f2f3', muted: '#9a9aa0', line: '#3a3a3c', panel: '#1c1c1f', correct: '#538d4e', present: '#b59f3b', absent: '#3a3a3c' };
+const DARK = { ...LIGHT, bg: '#131512', fg: '#eef1ec', muted: '#9ba597', line: '#3d443c', panel: '#1b1e1a', accent: '#8cc985', correct: '#538d4e', present: '#b59f3b', absent: '#3a3a3c' };
 const HIGH_CONTRAST = { correct: '#f5793a', present: '#85c0f9' };
 
 export function parseColour(s: string, fallback: RGB = [0.5, 0.5, 0.5]): RGB {
@@ -63,14 +64,6 @@ export function mix(a: RGB, b: RGB, t: number): RGB {
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 }
 
-function prefersDark(): boolean {
-  try {
-    return typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: dark)').matches;
-  } catch {
-    return false;
-  }
-}
-
 let cached: Palette | null = null;
 let probe: Element | null = null;
 
@@ -80,9 +73,9 @@ export function setPaletteProbe(el: Element | null): void {
   cached = null;
 }
 
-/** The current palette (cheap: re-read only when the palette setting or the colour scheme changes). */
+/** The current palette (cheap: re-read only when the palette setting or the Appearance changes). */
 export function palette(): Palette {
-  const dark = prefersDark();
+  const dark = isDark();
   const hc = app.display.palette === 'high-contrast';
   const key = `${dark ? 'd' : 'l'}${hc ? 'h' : 's'}`;
   if (cached && cached.key === key) return cached;

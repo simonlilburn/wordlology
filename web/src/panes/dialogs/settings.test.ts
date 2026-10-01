@@ -28,9 +28,9 @@ describe('the settings table', () => {
     expect([...display].sort()).toEqual(Object.keys(DEFAULT_DISPLAY).sort());
   });
 
-  it('matches the specification: 26 rows in seven groups', () => {
-    expect(SETTINGS).toHaveLength(26);
-    expect(GROUPS.map((g) => settingsIn(g).length)).toEqual([6, 6, 4, 2, 2, 4, 2]);
+  it('matches the specification: 27 rows in seven groups', () => {
+    expect(SETTINGS).toHaveLength(27);
+    expect(GROUPS.map((g) => settingsIn(g).length)).toEqual([7, 6, 4, 2, 2, 4, 2]);
   });
 
   it('offers each default among its options', () => {

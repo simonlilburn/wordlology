@@ -12,6 +12,10 @@
   import Dialogs from './panes/Dialogs.svelte';
   import Toasts from './app/Toasts.svelte';
   import { app } from './app/store.svelte';
+  import { applyTheme, isDark } from './app/theme.svelte';
+
+  // Light unless the Appearance setting says otherwise (global.css keys its tokens on data-theme).
+  $effect(() => applyTheme(isDark()));
 </script>
 
 <div class="shell" class:high-contrast={app.display.palette === 'high-contrast'} class:reduced-motion={app.reducedMotion}>

@@ -3,20 +3,30 @@
   // canvas, once. The scene is a plain TypeScript module; Svelte never
   // re-renders it (this component has no reactive markup).
   import { onMount } from 'svelte';
+  import { fontsReady } from '../app/fonts';
   import { createScene } from './index';
 
   let canvas: HTMLCanvasElement | undefined = $state();
   let failed = $state(false);
 
+  // The scene starts once the typefaces are in (or a short timeout passes), so
+  // its canvas text never bakes in a fallback font.
   onMount(() => {
-    if (!canvas) return;
-    try {
-      const api = createScene(canvas);
-      return () => api.dispose();
-    } catch (e) {
-      console.error('[scene] WebGL is not available', e);
-      failed = true;
-    }
+    let api: { dispose(): void } | null = null;
+    let gone = false;
+    void fontsReady().then(() => {
+      if (gone || !canvas) return;
+      try {
+        api = createScene(canvas);
+      } catch (e) {
+        console.error('[scene] WebGL is not available', e);
+        failed = true;
+      }
+    });
+    return () => {
+      gone = true;
+      api?.dispose();
+    };
   });
 </script>
 

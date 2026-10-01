@@ -36,6 +36,7 @@ export interface ResultSettings {
 /** Settings that only change how things look (kept per browser). */
 export interface DisplaySettings {
   zoomOutAfterGame: boolean;
+  theme: 'light' | 'dark' | 'system';
   palette: 'standard' | 'high-contrast';
   colourBlindMarks: boolean;
   counterfactualBranches: number; // 0 = off, else top 2..5
@@ -68,6 +69,7 @@ export const DEFAULT_RESULT: ResultSettings = {
 
 export const DEFAULT_DISPLAY: DisplaySettings = {
   zoomOutAfterGame: true,
+  theme: 'light',
   palette: 'standard',
   colourBlindMarks: true,
   counterfactualBranches: 0,
